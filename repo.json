@@ -1,0 +1,23 @@
+[
+  {
+    "Author": "Taurenkey, Kagekazu, Knightmore, 1Stalk",
+    "Name": "Saucy (Cardsharp)",
+    "Punchline": "When working for MGP is too much effort.",
+    "Description": "Automates certain Gold Saucer mini-games. Enhanced with XIVcardsharp Triple Triad AI engine.",
+    "InternalName": "Saucy",
+    "AssemblyVersion": "2.1.2.5",
+    "RepoUrl": "https://github.com/1Stalk/Saucy",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "DownloadLinkInstall": "https://github.com/1Stalk/Saucy/releases/latest/download/Saucy.zip",
+    "DownloadLinkUpdate": "https://github.com/1Stalk/Saucy/releases/latest/download/Saucy.zip",
+    "IconUrl": "https://raw.githubusercontent.com/1Stalk/Saucy/master/images/icon.png",
+    "Tags": [
+      "gold saucer",
+      "mgp",
+      "automation",
+      "triple triad",
+      "cardsharp"
+    ]
+  }
+]

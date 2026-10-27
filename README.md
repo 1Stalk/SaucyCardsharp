@@ -14,8 +14,8 @@ Automates Gold Saucer mini-games and tracks your stats.
 ## Install
 
 1. Dalamud → **Settings** → **Experimental**
-2. Add this repo: `https://love.puni.sh/ment.json`
-3. Install **Saucy** from the plugin installer
+2. Add custom repository: `https://raw.githubusercontent.com/1Stalk/Saucy/master/repo.json`
+3. Install **Saucy (Cardsharp)** from the plugin installer
 
 ## Games
 
