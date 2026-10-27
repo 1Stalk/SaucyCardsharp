@@ -193,15 +193,17 @@ public class TriadGameModifierOrder : TriadGameModifier
 
     public override void OnFilterNextCards(TriadGameSimulationState gameData, ref int allowedCardsMask)
     {
-        if ((gameData.state == ETriadGameState.InProgressBlue) && (allowedCardsMask != 0))
+        if (allowedCardsMask != 0)
         {
-            var firstBlueIdx = gameData.deckBlue.GetFirstAvailableCardFast();
-            allowedCardsMask = (firstBlueIdx < 0) ? 0 : (1 << firstBlueIdx);
+            var isBlue = gameData.state == ETriadGameState.InProgressBlue;
+            var activeDeck = isBlue ? gameData.deckBlue : gameData.deckRed;
+            var firstIdx = activeDeck.GetFirstAvailableCardFast();
+            allowedCardsMask = (firstIdx < 0) ? 0 : (1 << firstIdx);
 
             if (gameData.bDebugRules)
             {
-                var firstBlueCard = gameData.deckBlue.GetCard(firstBlueIdx);
-                Logger.WriteLine(">> " + RuleName + "! next card: " + (firstBlueCard != null ? firstBlueCard.Name : "none"));
+                var firstCard = activeDeck.GetCard(firstIdx);
+                Logger.WriteLine(">> " + RuleName + "! next card: " + (firstCard != null ? firstCard.Name : "none"));
             }
         }
     }

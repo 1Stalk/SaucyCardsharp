@@ -62,6 +62,11 @@ public sealed partial class Saucy
                 TriadDialogueSkip.Tick();
             }
 
+            if ((C.UniversalTriadAutoplayEnabled || C.UniversalTriadTournamentEnabled) && TriadUiState.IsBoardVisible())
+            {
+                UniversalTriadManager.Tick();
+            }
+
             if (TriadRunSession.ModuleEnabled || TriadUiState.IsResultVisible() ||
                 TriadMapNavigation.IsNavigationActive)
             {

@@ -57,7 +57,7 @@ public class TriadGameSolver
         agent.Initialize(this, 0);
     }
 
-    public static TriadGameSolver CreateLive() => new(new TriadGameAgentCarloTheExplorer());
+    public static TriadGameSolver CreateLive() => new(new TriadGameAgentCardsharp());
 
     public void InitializeSimulation(IEnumerable<TriadGameModifier> modsA, IEnumerable<TriadGameModifier> modsB) => simulation.Initialize(modsA, modsB);
     public void InitializeSimulation(IEnumerable<TriadGameModifier> mods) => simulation.Initialize(mods);

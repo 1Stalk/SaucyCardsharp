@@ -1,3 +1,6 @@
 [submodule "PunishLib"]
 	path = PunishLib
 	url = https://github.com/PunishXIV/PunishLib
+[submodule "XIVcardsharp"]
+	path = XIVcardsharp
+	url = https://github.com/1Stalk/XIVcardsharp

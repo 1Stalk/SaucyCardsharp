@@ -78,6 +78,15 @@ public class Configuration : IPluginConfiguration
 
     public TriadCollectionSettings TriadCollection { get; set; } = new();
 
+    // --- Universal Triad Engine Settings ---
+    public bool UniversalTriadAutoplayEnabled { get; set; } = false;
+    public bool UniversalTriadTournamentEnabled { get; set; } = false;
+    public int UniversalTriadMoveDelayMs { get; set; } = 100;
+    public int UniversalTriadSampleCount { get; set; } = 300;
+    public int UniversalTriadMaxThreads { get; set; } = 0;
+    public bool UniversalTriadRecordMatches { get; set; } = false;
+    public bool UniversalTriadDraftOverlayEnabled { get; set; } = true;
+
     public GoldSaucerGateSettings GoldSaucerGates { get; set; } = new();
 
     public JumboCactpotSettings JumboCactpot { get; set; } = new();
@@ -111,6 +120,9 @@ public class Configuration : IPluginConfiguration
     }
 
     public static int ClampDeckOptimizerMaxThreads(int threads) =>
+        Math.Clamp(threads, 0, Environment.ProcessorCount);
+
+    public static int ClampUniversalTriadMaxThreads(int threads) =>
         Math.Clamp(threads, 0, Environment.ProcessorCount);
 
     public bool IsModuleEnabled(string moduleName) => EnabledModules.Contains(moduleName);

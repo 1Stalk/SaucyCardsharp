@@ -3,6 +3,8 @@ using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Lumina.Excel.Sheets;
+using Saucy.TripleTriad.TournamentDraft;
+using Saucy.TripleTriad.UniversalEngine;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -13,44 +15,196 @@ namespace Saucy.TripleTriad;
 internal static class TriadSettingsUi
 {
     private static int DraftMatchCount = 1;
+    private static string _lastDraftStatus = string.Empty;
 
-    public static void Draw()
+    internal enum TriadAutoplayMode
     {
-        DraftMatchCount = Math.Max(1, C.TriadMatchCount);
-        var runTargetNpc = TriadRunTarget.Resolve();
+        None,
+        Npc,
+        OpenTournament,
+        PvP,
+    }
 
-        var enabled = TriadRunSession.ModuleEnabled;
-        if (ImGui.Checkbox(Loc.T("Enable"), ref enabled))
+    private static void SetAutoplayMode(TriadAutoplayMode targetMode, GameNpcInfo? runTargetNpc = null)
+    {
+        switch (targetMode)
         {
-            if (enabled && !TriadNpcProximity.IsRelevantTriadNpcNearby())
-            {
-                var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
-                DuoLog.Warning(string.IsNullOrEmpty(npcName)
-                    ? Loc.T("No Triple Triad NPC nearby. Move closer to the NPC you want to play.")
-                    : Loc.T("No Triple Triad NPC nearby ({0}). Move closer to the NPC you want to play.", npcName));
-            }
-            else
-            {
-                TriadRunSession.ModuleEnabled = enabled;
-                if (enabled)
+            case TriadAutoplayMode.Npc:
+                C.UniversalTriadTournamentEnabled = false;
+                C.UniversalTriadAutoplayEnabled = false;
+                UniversalTriadManager.Reset();
+
+                if (!TriadNpcProximity.IsRelevantTriadNpcNearby())
                 {
+                    TriadRunSession.ModuleEnabled = false;
+                    var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
+                    DuoLog.Warning(string.IsNullOrEmpty(npcName)
+                        ? Loc.T("No Triple Triad NPC nearby. Move closer to the NPC you want to play.")
+                        : Loc.T("No Triple Triad NPC nearby ({0}). Move closer to the NPC you want to play.", npcName));
+                }
+                else
+                {
+                    TriadRunSession.ModuleEnabled = true;
                     CommitDraftMatchCount();
                     GoldSaucerArcadeMachineHelper.DisableConflictingModules();
                     TriadRunSession.BeginAutomationSession();
                     TriadCardFarmSession.SyncDisplay(runTargetNpc);
                     TriadAutomator.RunModule();
                 }
-                else
+
+                C.Save();
+                break;
+
+            case TriadAutoplayMode.OpenTournament:
+                TriadRunSession.StopAllAutomation(announce: false);
+                C.UniversalTriadAutoplayEnabled = false;
+                C.UniversalTriadTournamentEnabled = true;
+                UniversalTriadManager.Reset();
+                C.Save();
+                break;
+
+            case TriadAutoplayMode.PvP:
+                TriadRunSession.StopAllAutomation(announce: false);
+                C.UniversalTriadTournamentEnabled = false;
+                C.UniversalTriadAutoplayEnabled = true;
+                UniversalTriadManager.Reset();
+                C.Save();
+                break;
+
+            case TriadAutoplayMode.None:
+            default:
+                if (TriadRunSession.ModuleEnabled)
                 {
-                    TriadCardFarmSession.DeactivateSession(clearProgress: true);
+                    TriadRunSession.StopAllAutomation(announce: false);
                 }
-            }
+                C.UniversalTriadTournamentEnabled = false;
+                C.UniversalTriadAutoplayEnabled = false;
+                UniversalTriadManager.Reset();
+                C.Save();
+                break;
+        }
+    }
+
+    public static void Draw()
+    {
+        DraftMatchCount = Math.Max(1, C.TriadMatchCount);
+        var runTargetNpc = TriadRunTarget.Resolve();
+
+        DrawAutoplaySection(runTargetNpc);
+
+        ImGui.Dummy(new(0, 4));
+
+        DrawEngineSettings();
+
+        ImGui.Dummy(new(0, 4));
+
+        DrawGeneralSettings();
+
+        ImGui.Dummy(new(0, 4));
+
+        SaucyTheme.DrawCard(Loc.T("Open Tournament (Draft)"), null, DrawOpenTournamentBody);
+        SaucyTheme.DrawCard(Loc.T("Deck"), null, DrawDeckBody);
+        SaucyTheme.DrawCard(Loc.T("Run mode"), null, DrawRunModeBody);
+        SaucyTheme.DrawCard(Loc.T("Travel"), Loc.T("Map navigation"), DrawTravelMount);
+        SaucyTheme.DrawCard(Loc.T("Notifications"), null, DrawNotificationsBody);
+        SaucyTheme.DrawCard(Loc.T("Dependencies"), Loc.T("Optional integrations"), DrawDependencies);
+    }
+
+    private static void DrawAutoplaySection(GameNpcInfo? runTargetNpc)
+    {
+        ImGui.TextUnformatted(Loc.T("Autoplay Modes:"));
+
+        var isNpc = TriadRunSession.ModuleEnabled;
+        if (ImGui.Checkbox(Loc.T("Enable NPC Autoplay (Card Farming)"), ref isNpc))
+        {
+            SetAutoplayMode(isNpc ? TriadAutoplayMode.Npc : TriadAutoplayMode.None, runTargetNpc);
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            Loc.T("Accepts match invites, selects decks, plays cards, and handles rematches. Turn on before or during match prep."));
+
+        var isTournament = C.UniversalTriadTournamentEnabled;
+        if (ImGui.Checkbox(Loc.T("Enable Open Tournament Autoplay"), ref isTournament))
+        {
+            SetAutoplayMode(isTournament ? TriadAutoplayMode.OpenTournament : TriadAutoplayMode.None, runTargetNpc);
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            Loc.T("Autoplays matches in Gold Saucer Open Tournaments using XIVcardsharp solver against tournament draft decks."));
+
+        var isPvp = C.UniversalTriadAutoplayEnabled;
+        if (ImGui.Checkbox(Loc.T("Enable PvP / Friendly Autoplay"), ref isPvp))
+        {
+            SetAutoplayMode(isPvp ? TriadAutoplayMode.PvP : TriadAutoplayMode.None, runTargetNpc);
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            Loc.T("Autoplays custom or friendly PvP matches in Battlehall or open-world testing using XIVcardsharp solver."));
+    }
+
+    private static void DrawEngineSettings()
+    {
+        ImGui.TextUnformatted(Loc.T("XIVcardsharp Engine Settings:"));
+
+        var delay = Math.Clamp(C.UniversalTriadMoveDelayMs, 100, 3000);
+        ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
+        if (ImGui.SliderInt(Loc.T("Move delay"), ref delay, 100, 3000, "%d ms"))
+        {
+            C.UniversalTriadMoveDelayMs = delay;
+            C.Save();
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(Loc.T("Delay before placing a card once your turn begins. Applies across NPC, Tournament, and PvP matches."));
+
+        var samples = Math.Clamp(C.UniversalTriadSampleCount, 50, 500);
+        ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
+        if (ImGui.SliderInt(Loc.T("MCTS Samples"), ref samples, 50, 500, "%d"))
+        {
+            C.UniversalTriadSampleCount = samples;
+            C.Save();
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(Loc.T("Opponent deck samples evaluated per imperfect-information turn (50–500). Higher = stronger play, lower = faster. Recommended: 300."));
+
+        var maxCores = Environment.ProcessorCount;
+        var threads = Configuration.ClampUniversalTriadMaxThreads(C.UniversalTriadMaxThreads);
+        ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
+        if (ImGui.SliderInt(Loc.T("Solver threads (0 = all)###UniversalTriadThreads"), ref threads, 0, maxCores, threads == 0 ? Loc.TPrintf("All") : "%d"))
+        {
+            C.UniversalTriadMaxThreads = Configuration.ClampUniversalTriadMaxThreads(threads);
+            C.Save();
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(
+                Loc.T("Uses {0} of {1} logical cores for parallel solving.", SaucyParallelism.UniversalTriadThreads, maxCores));
         }
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            Loc.T("Accepts match invites, selects a deck, and plays through rematches. Turn on before or during match prep."));
+            Loc.T("Parallel threads during Monte Carlo solving across NPC, Tournament, and PvP matches (0 = all cores). Separate from Deck Optimizer threads.") +
+            (SaucyParallelism.IsWineHost
+                ? "\n\n" + Loc.T("Linux / Wine (XLCore, Steam Deck): solving threads are capped to half your logical cores no matter what you pick here to prevent wine crashes.")
+                : ""));
 
+        var record = C.UniversalTriadRecordMatches;
+        if (ImGui.Checkbox(Loc.T("Record Match Logs"), ref record))
+        {
+            C.UniversalTriadRecordMatches = record;
+            C.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button(Loc.T("Open Logs Folder")))
+        {
+            UniversalMatchRecorder.OpenLogsFolder();
+        }
+
+        DrawEngineStatusReadout();
+    }
+
+    private static void DrawGeneralSettings()
+    {
         var autoOpen = C.OpenAutomatically;
         if (ImGui.Checkbox(Loc.T("Open window when challenging an NPC"), ref autoOpen))
         {
@@ -70,22 +224,14 @@ internal static class TriadSettingsUi
             Loc.T("Shows a searchable card list beside the Gold Saucer card UI, including Edit Deck (TriadBuddy-style [No.1] ordering). Also shows NPC search on the main card collection screen."));
 
         var autoRegister = C.AutoRegisterTriadCards;
-        if (ImGui.Checkbox("Register won cards automatically", ref autoRegister))
+        if (ImGui.Checkbox(Loc.T("Register won cards automatically"), ref autoRegister))
         {
             C.AutoRegisterTriadCards = autoRegister;
             C.Save();
         }
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            "Uses Triple Triad card items in your inventory that aren't in your collection yet, once triad automation is idle.");
-
-        ImGui.Dummy(new(0, 4));
-
-        SaucyTheme.DrawCard(Loc.T("Deck"), null, DrawDeckBody);
-        SaucyTheme.DrawCard(Loc.T("Run mode"), null, DrawRunModeBody);
-        SaucyTheme.DrawCard(Loc.T("Travel"), Loc.T("Map navigation"), DrawTravelMount);
-        SaucyTheme.DrawCard(Loc.T("Notifications"), null, DrawNotificationsBody);
-        SaucyTheme.DrawCard(Loc.T("Dependencies"), Loc.T("Optional integrations"), DrawDependencies);
+            Loc.T("Uses Triple Triad card items in your inventory that aren't in your collection yet, once triad automation is idle."));
     }
 
     private static void DrawDeckOptimizerSettings()
@@ -135,7 +281,7 @@ internal static class TriadSettingsUi
         var threads = Configuration.ClampDeckOptimizerMaxThreads(C.DeckOptimizerMaxThreads);
         var maxCores = Environment.ProcessorCount;
         ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
-        if (ImGui.SliderInt(Loc.T("Optimizer threads (0 = all)"), ref threads, 0, maxCores, threads == 0 ? Loc.TPrintf("All") : "%d"))
+        if (ImGui.SliderInt(Loc.T("Deck optimizer threads (0 = all)###DeckOptimizerThreads"), ref threads, 0, maxCores, threads == 0 ? Loc.TPrintf("All") : "%d"))
         {
             C.DeckOptimizerMaxThreads = Configuration.ClampDeckOptimizerMaxThreads(threads);
             C.Save();
@@ -149,7 +295,7 @@ internal static class TriadSettingsUi
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            Loc.T("Parallel threads while building an optimized deck (0 = all cores).") +
+            Loc.T("Parallel threads while building an optimized deck (0 = all cores). Separate from match solver threads.") +
             (SaucyParallelism.IsWineHost
                 ? "\n\n" + Loc.T("Linux / Wine (XLCore, Steam Deck): deck builds are capped to half your logical cores no matter what you pick here. Using every core for parallel deck builds can hard-crash the game under Wine.")
                 : ""));
@@ -679,6 +825,88 @@ internal static class TriadSettingsUi
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(Loc.T("Stops the current background deck build."));
+        }
+    }
+
+    private static void DrawOpenTournamentBody()
+    {
+        var draftOpen = TournamentDraftManager.IsDraftWindowOpen(out var rules);
+        if (draftOpen)
+        {
+            var rulesStr = rules.Count > 0 ? string.Join(", ", rules) : Loc.T("Standard");
+            ImGui.TextColored(new Vector4(0.4f, 0.85f, 1.0f, 1.0f), Loc.T("● Draft Active — Tournament Rules: {0}", rulesStr));
+            ImGui.Dummy(new Vector2(0, 2));
+
+            var eval = TournamentDraftManager.GetCurrentEvaluation();
+            if (eval != null)
+            {
+                if (!string.IsNullOrEmpty(eval.Summary))
+                {
+                    ImGui.TextDisabled(eval.Summary);
+                    ImGui.Dummy(new Vector2(0, 2));
+                }
+
+                var greenColor = new Vector4(0.2f, 0.95f, 0.35f, 1.0f);
+                var s1Cards = eval.Set1Cards.Count > 0
+                    ? string.Join(", ", eval.Set1Cards.Select(c => c.Name))
+                    : string.Join(", ", eval.SelectedCards.Take(2).Select(c => c.Name));
+                var s2Cards = eval.Set2Cards.Count > 0
+                    ? string.Join(", ", eval.Set2Cards.Select(c => c.Name))
+                    : string.Join(", ", eval.SelectedCards.Skip(2).Take(2).Select(c => c.Name));
+                var s3Cards = eval.Set3Cards.Count > 0
+                    ? string.Join(", ", eval.Set3Cards.Select(c => c.Name))
+                    : string.Join(", ", eval.SelectedCards.Skip(4).Take(1).Select(c => c.Name));
+
+                ImGui.TextColored(greenColor, Loc.T("Row 1: Choose Option {0}  →  {1}", eval.Set1Option + 1, s1Cards));
+                ImGui.TextColored(greenColor, Loc.T("Row 2: Choose Option {0}  →  {1}", eval.Set2Option + 1, s2Cards));
+                ImGui.TextColored(greenColor, Loc.T("Row 3: Choose Option {0}  →  {1}", eval.Set3Option + 1, s3Cards));
+
+                ImGui.Dummy(new Vector2(0, 4));
+
+                if (ImGui.Button(Loc.T("✨ Auto-Select in Game"), new Vector2(240f * ImGuiHelpers.GlobalScale, 28f * ImGuiHelpers.GlobalScale)))
+                {
+                    TournamentDraftManager.ApplyOptimalDraft(out _lastDraftStatus);
+                }
+
+                if (!string.IsNullOrEmpty(_lastDraftStatus))
+                {
+                    ImGui.TextColored(new Vector4(0.3f, 0.9f, 0.3f, 1.0f), Loc.T("✓ Radio buttons selected in game."));
+                    ImGui.TextColored(new Vector4(1.0f, 0.8f, 0.2f, 1.0f), Loc.T("→ Now click 'Confirm' in the game window."));
+                }
+                else
+                {
+                    ImGui.TextColored(new Vector4(1.0f, 0.8f, 0.2f, 1.0f), Loc.T("→ Select options above or click Auto-Select, then click 'Confirm' in game."));
+                }
+            }
+            else
+            {
+                ImGui.TextDisabled(Loc.T("Reading draft cards from game window…"));
+            }
+        }
+        else
+        {
+            _lastDraftStatus = string.Empty;
+            ImGui.TextDisabled(Loc.T("Draft window is not open."));
+            ImGui.TextDisabled(Loc.T("Enter an 8-player Open Tournament in Battlehall and open the draft window."));
+            ImGui.TextDisabled(Loc.T("Optimal choices will be evaluated and displayed here automatically."));
+        }
+    }
+
+    private static void DrawEngineStatusReadout()
+    {
+        var status = UniversalTriadManager.StatusSummary;
+        var engineState = UniversalTriadManager.Status;
+        if (engineState == UniversalEngineStatus.Evaluating)
+        {
+            SaucyTheme.TextWarning(Loc.T("Solver status: {0}", status));
+        }
+        else if (engineState is UniversalEngineStatus.MoveReady or UniversalEngineStatus.Executing)
+        {
+            ImGui.TextColored(new Vector4(0.3f, 0.9f, 0.3f, 1.0f), Loc.T("Solver status: {0}", status));
+        }
+        else
+        {
+            ImGui.TextDisabled(Loc.T("Solver status: {0}", status));
         }
     }
 }

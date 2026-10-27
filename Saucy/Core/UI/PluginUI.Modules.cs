@@ -297,6 +297,14 @@ public unsafe partial class PluginUI
         {
             status = ModuleDisplayNames.TripleTriad;
         }
+        else if (C.UniversalTriadTournamentEnabled)
+        {
+            status = $"{ModuleDisplayNames.TripleTriad} (Tournament)";
+        }
+        else if (C.UniversalTriadAutoplayEnabled)
+        {
+            status = $"{ModuleDisplayNames.TripleTriad} (PvP)";
+        }
         else if (CuffACurAutomation.IsEnabled)
         {
             status = ModuleDisplayNames.CuffACur;

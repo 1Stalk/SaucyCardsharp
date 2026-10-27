@@ -165,12 +165,21 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
     public List<TriadGameModifier> ToTriadModifier(GameUIParser ctx, bool markFailed = false)
     {
         var list = new List<TriadGameModifier>();
-        foreach (var rule in rules)
+        foreach (var rawRule in rules)
         {
-            var matchOb = ctx.ParseModifier(rule, markFailed);
-            if (matchOb != null)
+            if (string.IsNullOrWhiteSpace(rawRule))
             {
-                list.Add(matchOb);
+                continue;
+            }
+
+            var parts = rawRule.Split(['/', ',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var part in parts)
+            {
+                var matchOb = ctx.ParseModifier(part, markFailed);
+                if (matchOb != null && !list.Exists(m => m.GetLocalizationId() == matchOb.GetLocalizationId()))
+                {
+                    list.Add(matchOb);
+                }
             }
         }
 

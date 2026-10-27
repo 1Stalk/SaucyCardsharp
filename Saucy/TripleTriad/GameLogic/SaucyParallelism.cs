@@ -29,7 +29,7 @@ internal static class SaucyParallelism
     };
 
     public static int DeckOptimizerConfiguredThreads
-        => Configuration.ClampDeckOptimizerMaxThreads(C.DeckOptimizerMaxThreads);
+        => Configuration.ClampDeckOptimizerMaxThreads(C?.DeckOptimizerMaxThreads ?? 0);
 
     public static int DeckOptimizerThreads
     {
@@ -43,6 +43,18 @@ internal static class SaucyParallelism
             }
 
             return threads;
+        }
+    }
+
+    public static int UniversalTriadConfiguredThreads
+        => Configuration.ClampUniversalTriadMaxThreads(C?.UniversalTriadMaxThreads ?? 0);
+
+    public static int UniversalTriadThreads
+    {
+        get
+        {
+            var configured = UniversalTriadConfiguredThreads;
+            return CapForWine(configured <= 0 ? Math.Max(1, LogicalProcessorCount) : configured);
         }
     }
 

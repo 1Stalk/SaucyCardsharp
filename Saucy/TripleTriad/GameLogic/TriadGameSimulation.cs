@@ -176,7 +176,7 @@ public class TriadGameSimulation
                 gameState.state = ETriadGameState.InProgressBlue;
             }
 
-            bResult = (owner == ETriadCardOwner.Red) || !HasSpecialRule(ETriadGameSpecialMod.IgnoreOwnedCheck);
+            bResult = true;
 
             var bAllowCombo = false;
             if ((modFeatures & TriadGameModifier.EFeature.CardPlaced) != 0)

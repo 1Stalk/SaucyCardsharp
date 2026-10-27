@@ -8,6 +8,7 @@ using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.IPC;
 using Saucy.OutOnALimb;
+using Saucy.TripleTriad.TournamentDraft;
 using System;
 using System.Collections.Specialized;
 using System.Threading;
@@ -113,6 +114,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
             () => P.DisableArcadeModule(ModuleNames.OutOnALimb));
 
         EzConfigGui.Init(_pluginUi);
+        EzConfigGui.WindowSystem.AddWindow(new TournamentDraftOverlay());
         Svc.PluginInterface.UiBuilder.OpenMainUi += EzConfigGui.Open;
         Svc.PluginInterface.LanguageChanged += OnDalamudLanguageChanged;
 
@@ -240,6 +242,9 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
 
             if (subCommand.Equals("go", StringComparison.OrdinalIgnoreCase))
             {
+                C.UniversalTriadTournamentEnabled = false;
+                C.UniversalTriadAutoplayEnabled = false;
+                C.Save();
                 TriadRunSession.ModuleEnabled = true;
                 TriadRunSession.BeginAutomationSession();
                 Svc.Chat.Print(Loc.T("[Saucy] Triple Triad automation enabled."));

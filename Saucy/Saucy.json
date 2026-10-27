@@ -1,15 +1,17 @@
 {
-  "Author": "Taurenkey, Kagekazu, Knightmore",
-  "Name": "Saucy",
+  "Author": "Taurenkey, Kagekazu, Knightmore, 1Stalk",
+  "Name": "Saucy (Cardsharp)",
   "Punchline": "When working for MGP is too much effort.",
-  "Description": "Automates certain Gold Saucer mini-games.",
+  "Description": "Automates certain Gold Saucer mini-games. Enhanced with XIVcardsharp Triple Triad AI engine.",
   "InternalName": "Saucy",
-  "IconUrl": "https://s3.puni.sh/media/plugin/7/icon-bl3wub19h2u.png",
-  "RepoUrl": "https://github.com/PunishXIV/Saucy",
+  "RepoUrl": "https://github.com/1Stalk/Saucy",
+  "IconUrl": "https://raw.githubusercontent.com/1Stalk/Saucy/master/images/icon.png",
   "DalamudApiLevel": 15,
   "Tags": [
     "gold saucer",
     "mgp",
-    "automation"
+    "automation",
+    "triple triad",
+    "cardsharp"
   ]
 }

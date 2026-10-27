@@ -1,8 +1,8 @@
 <!-- Repository Header Begin -->
 <div align="center">
-<img src="https://puni.sh/_next/image?url=https%3A%2F%2Fs3.puni.sh%2Fmedia%2Fplugin%2F7%2Ficon-bl3wub19h2u.png&w=256&q=100" alt="Saucy" width="15%">
+<img src="images/icon.png" alt="Saucy (Cardsharp)" width="128">
 
-# Saucy
+# Saucy (Cardsharp)
 
 When working for MGP is too much effort.
 

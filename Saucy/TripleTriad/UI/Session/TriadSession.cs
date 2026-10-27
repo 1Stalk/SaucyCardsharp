@@ -21,7 +21,6 @@ public partial class TriadSession
     public const int DeckSelectPostProfileWriteFrames = 45;
     private static readonly TimeSpan OptimizedDeckRebuildCooldown = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan OptimizerStartFailureCooldown = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan MoveHighlightGracePeriod = TimeSpan.FromMilliseconds(800);
     private static readonly List<TriadCard?> UnlockedDeckSlots = [null, null, null, null, null];
 
     private readonly Lock _preGameLock = new();
@@ -335,14 +334,22 @@ public partial class TriadSession
         return null;
     }
 
-    public bool IsMoveReadyForPlacement() =>
-        !hasMove ||
-        (TriadRunSession.ModuleEnabled && !IsTriadBuddyLoaded()) ||
-        TriadCardFarmSession.IsModeActive() ||
-        (_moveReadyUtc.HasValue && DateTime.UtcNow - _moveReadyUtc.Value >= MoveHighlightGracePeriod);
+    public bool IsMoveReadyForPlacement()
+    {
+        if (!hasMove)
+        {
+            return false;
+        }
 
-    private static bool IsTriadBuddyLoaded() =>
-        Svc.PluginInterface.InstalledPlugins.Any(p => p.InternalName == "TriadBuddy" && p.IsLoaded);
+        if (!_moveReadyUtc.HasValue)
+        {
+            _moveReadyUtc = DateTime.UtcNow;
+            return false;
+        }
+
+        var delayMs = Math.Max(50, C?.UniversalTriadMoveDelayMs ?? 100);
+        return (DateTime.UtcNow - _moveReadyUtc.Value).TotalMilliseconds >= delayMs;
+    }
 
     public class DeckData
     {

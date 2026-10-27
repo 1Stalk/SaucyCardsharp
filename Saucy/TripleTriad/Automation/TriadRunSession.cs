@@ -3,6 +3,7 @@ using ECommons.Automation;
 using Saucy.Framework;
 using Saucy.IPC;
 using Saucy.OtherGames;
+using Saucy.TripleTriad.UniversalEngine;
 using System;
 namespace Saucy.TripleTriad;
 
@@ -290,6 +291,9 @@ internal static class TriadRunSession
         WindBlowsGateMovement.ReleaseIfOwned();
         TriadMapNavigation.CancelActiveNavigation();
         ModuleEnabled = false;
+        C.UniversalTriadTournamentEnabled = false;
+        C.UniversalTriadAutoplayEnabled = false;
+        UniversalTriadManager.Reset();
         ClearDutyFinderDefer();
         ClearNavigationDeckBuildOverride();
         TriadCardFarmSession.DeactivateSession(clearProgress: true);

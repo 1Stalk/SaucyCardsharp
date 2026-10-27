@@ -1,11 +1,26 @@
+using Saucy.TripleTriad.UniversalEngine;
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
 {
+    private Task<(int bestCardIdx, int bestBoardPos, float ev, int evalMs)>? _evalTask;
+
     public void UpdateGame(UIStateTriadGame? stateOb)
     {
         status = Status.NoErrors;
+
+        if (stateOb == null || !TriadUiState.IsBoardVisible())
+        {
+            if (UniversalTriadManager.Status != UniversalEngineStatus.Idle &&
+                !C.UniversalTriadAutoplayEnabled &&
+                !C.UniversalTriadTournamentEnabled)
+            {
+                UniversalTriadManager.Reset();
+            }
+        }
 
         TriadBoardScanner.GameState? screenOb = null;
         if (stateOb != null)
@@ -59,70 +74,123 @@ public partial class TriadSession
             stateOb != null &&
             IsBlueTurnReadyForSolver(stateOb))
         {
-            var updateFlags = DebugScreenMemory.OnNewScan(screenOb, currentNpc);
-            if (updateFlags != TriadGameScreenMemory.EUpdateFlags.None)
+            if (_evalTask != null)
             {
-                if (DebugScreenMemory.deckBlue != null &&
-                    DebugScreenMemory.gameState != null &&
-                    DebugScreenMemory.gameSolver != null)
+                if (!_evalTask.IsCompleted)
                 {
-                    RunSolverAndCommit();
+                    return;
+                }
+
+                if (_evalTask.IsFaulted)
+                {
+                    Svc.Log.Error(_evalTask.Exception, "[Saucy] Live move solver task faulted");
+                    _evalTask = null;
+                    ClearMove();
+                    return;
+                }
+
+                var (bestCardIdx, bestBoardPos, ev, evalMs) = _evalTask.Result;
+                _evalTask = null;
+
+                var hadMove = hasMove;
+                var newCardIdx = bestCardIdx;
+                var newBoardIdx = newCardIdx < 0 ? -1 : bestBoardPos;
+
+                var forcedCardIdx = DebugScreenMemory.gameState?.forcedCardIdx ?? -1;
+                if (forcedCardIdx >= 0 && newCardIdx != forcedCardIdx)
+                {
+                    newCardIdx = forcedCardIdx;
+                }
+
+                moveCardIdx = newCardIdx;
+                moveBoardIdx = newBoardIdx;
+                hasMove = moveCardIdx >= 0 && moveBoardIdx >= 0;
+                if (hasMove && !hadMove)
+                {
+                    _moveReadyUtc = DateTime.UtcNow;
+                }
+
+                if (hasMove)
+                {
+                    UniversalTriadManager.SetStatus(
+                        UniversalEngineStatus.MoveReady,
+                        $"Ready [Blue]: Card #{moveCardIdx + 1} -> ({moveBoardIdx % 3}, {moveBoardIdx / 3}), EV: {ev:P0} ({evalMs}ms)");
                 }
                 else
                 {
-                    ClearMove();
+                    UniversalTriadManager.SetStatus(
+                        UniversalEngineStatus.WaitingTurn,
+                        "No legal moves available");
+                }
+                return;
+            }
+
+            if (!hasMove)
+            {
+                var updateFlags = DebugScreenMemory.OnNewScan(screenOb, currentNpc);
+                if (updateFlags != TriadGameScreenMemory.EUpdateFlags.None)
+                {
+                    if (DebugScreenMemory.deckBlue != null &&
+                        DebugScreenMemory.gameState != null &&
+                        DebugScreenMemory.gameSolver != null)
+                    {
+                        StartSolverTask();
+                    }
+                    else
+                    {
+                        ClearMove();
+                    }
                 }
             }
         }
-        else if (hasMove && (stateOb == null || !TriadTurnState.CanBlueAct(stateOb.move, stateOb.isPlayerTurn)))
+        else
         {
-            ClearMove();
+            if (hasMove && (stateOb == null || !TriadTurnState.CanBlueAct(stateOb.move, stateOb.isPlayerTurn)))
+            {
+                ClearMove();
+            }
+
+            if (stateOb != null && TriadUiState.IsBoardVisible() && !hasMove && _evalTask == null)
+            {
+                if (UniversalTriadManager.Status != UniversalEngineStatus.Executing)
+                {
+                    UniversalTriadManager.SetStatus(
+                        UniversalEngineStatus.WaitingTurn,
+                        "Waiting for opponent (Red)...");
+                }
+            }
         }
     }
 
-    public void ResetForNewMatch() => ClearMove();
+    public void ResetForNewMatch()
+    {
+        ClearMove();
+        UniversalTriadManager.Reset();
+    }
 
-    private void RunSolverAndCommit()
+    private void StartSolverTask()
     {
         _pauseOptimizerForSolver = true;
         UpdateDeckOptimizerPause();
 
-        try
-        {
-            DebugScreenMemory.gameSolver.FindNextMove(
-                DebugScreenMemory.gameState,
-                out var bestCardIdx,
-                out var bestBoardPos,
-                out var _);
+        UniversalTriadManager.SetStatus(
+            UniversalEngineStatus.Evaluating,
+            "Thinking (Blue)...");
 
-            var hadMove = hasMove;
-            var newCardIdx = bestCardIdx;
-            var newBoardIdx = newCardIdx < 0 ? -1 : bestBoardPos;
+        var snapshotState = new TriadGameSimulationState(DebugScreenMemory.gameState);
+        var solver = DebugScreenMemory.gameSolver;
 
-            var forcedCardIdx = DebugScreenMemory.gameState.forcedCardIdx;
-            if (forcedCardIdx >= 0 && newCardIdx != forcedCardIdx)
-            {
-                newCardIdx = forcedCardIdx;
-            }
-
-            moveCardIdx = newCardIdx;
-            moveBoardIdx = newBoardIdx;
-            hasMove = moveCardIdx >= 0 && moveBoardIdx >= 0;
-            if (hasMove && !hadMove)
-            {
-                _moveReadyUtc = DateTime.UtcNow;
-            }
-        }
-        catch (Exception ex)
+        _evalTask = Task.Run(() =>
         {
-            Svc.Log.Error(ex, "[Saucy] Live move solver failed");
-            ClearMove();
-        }
-        finally
-        {
-            _pauseOptimizerForSolver = false;
-            UpdateDeckOptimizerPause();
-        }
+            var sw = Stopwatch.StartNew();
+            solver.FindNextMove(
+                snapshotState,
+                out var cardIdx,
+                out var boardPos,
+                out var solverResult);
+            sw.Stop();
+            return (cardIdx, boardPos, solverResult.winChance, (int)sw.ElapsedMilliseconds);
+        });
     }
 
     private static bool IsBlueTurnReadyForSolver(UIStateTriadGame? stateOb) =>
@@ -133,10 +201,13 @@ public partial class TriadSession
 
     private void ClearMove()
     {
+        _evalTask = null;
         hasMove = false;
         moveCardIdx = -1;
         moveBoardIdx = -1;
         _moveReadyUtc = null;
+        _pauseOptimizerForSolver = false;
+        UpdateDeckOptimizerPause();
     }
 
     internal void InvalidatePendingMoveCalc() => ClearMove();
