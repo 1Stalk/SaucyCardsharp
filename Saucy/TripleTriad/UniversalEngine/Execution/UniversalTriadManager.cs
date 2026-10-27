@@ -40,6 +40,9 @@ public static unsafe class UniversalTriadManager
     private static DateTime _pendingOpponentTime = DateTime.MinValue;
     private static bool _waitingForMatchEnd;
     private static DateTime _matchEndWaitTime = DateTime.MinValue;
+    private static bool _moveSubmittedThisTurn;
+    private static int _submittedCardsPlacedCount = -1;
+    private static DateTime _moveSubmittedTime = DateTime.MinValue;
 
     public static void Tick()
     {
@@ -265,6 +268,24 @@ public static unsafe class UniversalTriadManager
             }
         }
 
+        if (_moveSubmittedThisTurn)
+        {
+            if (!state.IsPlayerTurn || state.NumCardsPlaced > _submittedCardsPlacedCount)
+            {
+                _moveSubmittedThisTurn = false;
+            }
+            else if ((DateTime.UtcNow - _moveSubmittedTime).TotalMilliseconds > 3500)
+            {
+                _moveSubmittedThisTurn = false;
+            }
+            else
+            {
+                Status = UniversalEngineStatus.WaitingTurn;
+                StatusSummary = "Move placed. Waiting for turn end...";
+                return;
+            }
+        }
+
         var canAct = TriadTurnState.CanAct(state.TurnState, state.IsPlayerTurn);
         if (!canAct)
         {
@@ -366,6 +387,9 @@ public static unsafe class UniversalTriadManager
                         _lastCandidates);
 
                     ResetTurn();
+                    _moveSubmittedThisTurn = true;
+                    _submittedCardsPlacedCount = state.NumCardsPlaced;
+                    _moveSubmittedTime = DateTime.UtcNow;
                     Status = UniversalEngineStatus.WaitingTurn;
                     StatusSummary = "Move placed. Waiting for turn end...";
                 }
@@ -389,6 +413,9 @@ public static unsafe class UniversalTriadManager
         Status = UniversalEngineStatus.Idle;
         StatusSummary = "Idle";
         _lastCardsPlacedCount = -1;
+        _moveSubmittedThisTurn = false;
+        _submittedCardsPlacedCount = -1;
+        _moveSubmittedTime = DateTime.MinValue;
         _pendingOpponentSlot = -1;
         _pendingOpponentCard = null;
         _waitingForMatchEnd = false;
