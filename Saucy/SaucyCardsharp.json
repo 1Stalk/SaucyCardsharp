@@ -4,8 +4,8 @@
   "Punchline": "When working for MGP is too much effort.",
   "Description": "Automates certain Gold Saucer mini-games. Enhanced with XIVcardsharp Triple Triad AI engine.",
   "InternalName": "SaucyCardsharp",
-  "RepoUrl": "https://github.com/1Stalk/Saucy",
-  "IconUrl": "https://raw.githubusercontent.com/1Stalk/Saucy/master/images/icon.png",
+  "RepoUrl": "https://github.com/1Stalk/SaucyCardsharp",
+  "IconUrl": "https://raw.githubusercontent.com/1Stalk/SaucyCardsharp/master/images/icon.png",
   "DalamudApiLevel": 15,
   "Tags": [
     "gold saucer",
