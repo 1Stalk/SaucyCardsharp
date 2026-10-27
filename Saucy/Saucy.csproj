@@ -4,7 +4,7 @@
         <AssemblyName>SaucyCardsharp</AssemblyName>
         <PackageId>SaucyCardsharp</PackageId>
         <Authors>Taurenkey, Kagekazu, Knightmore, 1Stalk</Authors>
-        <Version>2.1.2.8</Version>
+        <Version>2.1.2.9</Version>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -55,12 +55,12 @@
             <SyncImageFiles Include="$(TargetDir)images\*.*" />
             <SyncSoundFiles Include="$(TargetDir)Sounds\*.*" />
         </ItemGroup>
-        <Copy SourceFiles="@(SyncFiles)" DestinationFolder="$(ProjectDir)bin\Debug\" Condition="'$(Platform)' == 'x64' And '$(Configuration)' == 'Debug'" ContinueOnError="true" />
-        <Copy SourceFiles="@(SyncFiles)" DestinationFolder="$(ProjectDir)bin\x64\Debug\" Condition="'$(Platform)' != 'x64' And '$(Configuration)' == 'Debug'" ContinueOnError="true" />
-        <Copy SourceFiles="@(SyncImageFiles)" DestinationFolder="$(ProjectDir)bin\Debug\images\" Condition="'$(Platform)' == 'x64' And '$(Configuration)' == 'Debug'" ContinueOnError="true" />
-        <Copy SourceFiles="@(SyncImageFiles)" DestinationFolder="$(ProjectDir)bin\x64\Debug\images\" Condition="'$(Platform)' != 'x64' And '$(Configuration)' == 'Debug'" ContinueOnError="true" />
-        <Copy SourceFiles="@(SyncSoundFiles)" DestinationFolder="$(ProjectDir)bin\Debug\Sounds\" Condition="'$(Platform)' == 'x64' And '$(Configuration)' == 'Debug'" ContinueOnError="true" />
-        <Copy SourceFiles="@(SyncSoundFiles)" DestinationFolder="$(ProjectDir)bin\x64\Debug\Sounds\" Condition="'$(Platform)' != 'x64' And '$(Configuration)' == 'Debug'" ContinueOnError="true" />
+        <Copy SourceFiles="@(SyncFiles)" DestinationFolder="$(ProjectDir)bin\Debug\" Condition="'$(Configuration)' == 'Debug'" ContinueOnError="true" />
+        <Copy SourceFiles="@(SyncFiles)" DestinationFolder="$(ProjectDir)bin\x64\Debug\" Condition="'$(Configuration)' == 'Debug'" ContinueOnError="true" />
+        <Copy SourceFiles="@(SyncImageFiles)" DestinationFolder="$(ProjectDir)bin\Debug\images\" Condition="'$(Configuration)' == 'Debug'" ContinueOnError="true" />
+        <Copy SourceFiles="@(SyncImageFiles)" DestinationFolder="$(ProjectDir)bin\x64\Debug\images\" Condition="'$(Configuration)' == 'Debug'" ContinueOnError="true" />
+        <Copy SourceFiles="@(SyncSoundFiles)" DestinationFolder="$(ProjectDir)bin\Debug\Sounds\" Condition="'$(Configuration)' == 'Debug'" ContinueOnError="true" />
+        <Copy SourceFiles="@(SyncSoundFiles)" DestinationFolder="$(ProjectDir)bin\x64\Debug\Sounds\" Condition="'$(Configuration)' == 'Debug'" ContinueOnError="true" />
     </Target>
 </Project>
 

@@ -20,10 +20,10 @@ public static unsafe class UniversalTriadManager
         StatusSummary = summary;
     }
 
-    private static Task<(int cardIdx, int boardPos, float ev, int evalMs, List<UniversalTriadSolver.CandidateMove> candidates)>? _evalTask;
     private static DateTime _turnStartTime;
     private static bool _turnStartTracked;
     private static int _lastCardsPlacedCount = -1;
+    private static int _lastActedCardsPlaced = -1;
     private static int _bestCardIdx = -1;
     private static int _bestBoardPos = -1;
     private static float _bestEv;
@@ -40,9 +40,6 @@ public static unsafe class UniversalTriadManager
     private static DateTime _pendingOpponentTime = DateTime.MinValue;
     private static bool _waitingForMatchEnd;
     private static DateTime _matchEndWaitTime = DateTime.MinValue;
-    private static bool _moveSubmittedThisTurn;
-    private static int _submittedCardsPlacedCount = -1;
-    private static DateTime _moveSubmittedTime = DateTime.MinValue;
 
     public static void Tick()
     {
@@ -93,6 +90,7 @@ public static unsafe class UniversalTriadManager
         if (state.NumCardsPlaced == 0 && _lastCardsPlacedCount > 4)
         {
             ResetTurn();
+            _lastActedCardsPlaced = -1;
             _initialRoundPlayerCards.Clear();
             if (_matchStarted)
             {
@@ -268,22 +266,12 @@ public static unsafe class UniversalTriadManager
             }
         }
 
-        if (_moveSubmittedThisTurn)
+        // If we have already acted for this board ply, stay in WaitingTurn until the board advances
+        if (_lastActedCardsPlaced >= 0 && state.NumCardsPlaced <= _lastActedCardsPlaced)
         {
-            if (!state.IsPlayerTurn || state.NumCardsPlaced > _submittedCardsPlacedCount)
-            {
-                _moveSubmittedThisTurn = false;
-            }
-            else if ((DateTime.UtcNow - _moveSubmittedTime).TotalMilliseconds > 3500)
-            {
-                _moveSubmittedThisTurn = false;
-            }
-            else
-            {
-                Status = UniversalEngineStatus.WaitingTurn;
-                StatusSummary = "Move placed. Waiting for turn end...";
-                return;
-            }
+            Status = UniversalEngineStatus.WaitingTurn;
+            StatusSummary = $"Waiting for opponent ({state.OpponentColor})...";
+            return;
         }
 
         var canAct = TriadTurnState.CanAct(state.TurnState, state.IsPlayerTurn);
@@ -305,56 +293,26 @@ public static unsafe class UniversalTriadManager
             _turnStartTracked = true;
         }
 
-        if (Status is UniversalEngineStatus.WaitingTurn or UniversalEngineStatus.Idle)
+        // If we don't have a computed move for this turn yet, solve now synchronously (instant 1-5ms)
+        if (_bestCardIdx < 0 || _bestBoardPos < 0)
         {
             Status = UniversalEngineStatus.Evaluating;
             StatusSummary = $"Thinking ({state.LocalPlayerColor})...";
 
             var sampleCount = Math.Clamp(C.UniversalTriadSampleCount, 50, 500);
+            var sw = Stopwatch.StartNew();
+            var solver = new UniversalTriadSolver(mode, sampleCount, SaucyParallelism.UniversalTriadThreads);
+            var (cardIdx, boardPos, ev, candidates) = solver.Solve(state);
+            sw.Stop();
 
-            _evalTask = Task.Run(() =>
-            {
-                var sw = Stopwatch.StartNew();
-                var solver = new UniversalTriadSolver(mode, sampleCount, SaucyParallelism.UniversalTriadThreads);
-                var (cardIdx, boardPos, ev, candidates) = solver.Solve(state);
-                sw.Stop();
-                return (cardIdx, boardPos, ev, (int)sw.ElapsedMilliseconds, candidates);
-            });
-            return;
-        }
-
-        if (Status == UniversalEngineStatus.Evaluating)
-        {
-            if (_evalTask == null)
-            {
-                ResetTurn();
-                return;
-            }
-
-            if (!_evalTask.IsCompleted)
-            {
-                return;
-            }
-
-            if (_evalTask.IsFaulted)
-            {
-                Svc.Log.Error(_evalTask.Exception, "[UniversalTriadManager] Solve task faulted");
-                ResetTurn();
-                Status = UniversalEngineStatus.Idle;
-                StatusSummary = "Solve failed, retrying...";
-                return;
-            }
-
-            var result = _evalTask.Result;
-            _bestCardIdx = result.cardIdx;
-            _bestBoardPos = result.boardPos;
-            _bestEv = result.ev;
-            _lastEvalMs = result.evalMs;
-            _lastCandidates = result.candidates;
+            _bestCardIdx = cardIdx;
+            _bestBoardPos = boardPos;
+            _bestEv = ev;
+            _lastEvalMs = (int)sw.ElapsedMilliseconds;
+            _lastCandidates = candidates;
             _lastStrategy = state.NumCardsPlaced >= 4 ? "Endgame Exhaustive Alpha-Beta (Depth 10)" : (state.NumCardsPlaced <= 1 ? "Opening Adversarial Minimax (Depth 4)" : "Midgame Adversarial Minimax (Depth 6)");
             var matchingCandidate = _lastCandidates.FirstOrDefault(c => c.CardIdx == _bestCardIdx && c.BoardPos == _bestBoardPos);
             _bestPosScore = matchingCandidate.PositionalScore;
-            _evalTask = null;
 
             if (_bestCardIdx < 0 || _bestBoardPos < 0)
             {
@@ -366,7 +324,8 @@ public static unsafe class UniversalTriadManager
             StatusSummary = $"Ready [{state.LocalPlayerColor}]: Card #{_bestCardIdx + 1} -> ({_bestBoardPos % 3}, {_bestBoardPos / 3}), EV: {_bestEv:P0} ({_lastEvalMs}ms)";
         }
 
-        if (Status == UniversalEngineStatus.MoveReady)
+        // We have a move ready!
+        if (_bestCardIdx >= 0 && _bestBoardPos >= 0)
         {
             if (UniversalMoveExecutor.CanExecute(addon, state.IsPlayerTurn, _turnStartTime, C.UniversalTriadMoveDelayMs))
             {
@@ -386,16 +345,13 @@ public static unsafe class UniversalTriadManager
                         _lastStrategy,
                         _lastCandidates);
 
+                    _lastActedCardsPlaced = state.NumCardsPlaced;
                     ResetTurn();
-                    _moveSubmittedThisTurn = true;
-                    _submittedCardsPlacedCount = state.NumCardsPlaced;
-                    _moveSubmittedTime = DateTime.UtcNow;
                     Status = UniversalEngineStatus.WaitingTurn;
-                    StatusSummary = "Move placed. Waiting for turn end...";
+                    StatusSummary = $"Waiting for opponent ({state.OpponentColor})...";
                 }
                 else
                 {
-                    // Retry next tick if placement temporarily failed
                     Status = UniversalEngineStatus.MoveReady;
                 }
             }
@@ -413,9 +369,7 @@ public static unsafe class UniversalTriadManager
         Status = UniversalEngineStatus.Idle;
         StatusSummary = "Idle";
         _lastCardsPlacedCount = -1;
-        _moveSubmittedThisTurn = false;
-        _submittedCardsPlacedCount = -1;
-        _moveSubmittedTime = DateTime.MinValue;
+        _lastActedCardsPlaced = -1;
         _pendingOpponentSlot = -1;
         _pendingOpponentCard = null;
         _waitingForMatchEnd = false;
@@ -426,7 +380,6 @@ public static unsafe class UniversalTriadManager
 
     private static void ResetTurn()
     {
-        _evalTask = null;
         _turnStartTracked = false;
         _bestCardIdx = -1;
         _bestBoardPos = -1;
@@ -434,10 +387,5 @@ public static unsafe class UniversalTriadManager
         _bestPosScore = 0.0f;
         _lastStrategy = "";
         _lastCandidates = [];
-        if (Status == UniversalEngineStatus.Evaluating)
-        {
-            Status = UniversalEngineStatus.Idle;
-            StatusSummary = "Idle";
-        }
     }
 }

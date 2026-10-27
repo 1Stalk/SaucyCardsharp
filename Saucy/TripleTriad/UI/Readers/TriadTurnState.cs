@@ -59,7 +59,8 @@ internal static class TriadTurnState
     public static bool IsForcedCardPickPhase(byte turnState) => turnState == (byte)TurnState.MaskedMove;
 
     public static bool CanAct(byte turnState, bool isPlayerTurn) =>
-        isPlayerTurn || IsForcedCardPickPhase(turnState);
+        IsForcedCardPickPhase(turnState) ||
+        (IsBoardPickPhase(turnState) && isPlayerTurn);
 
     public static bool CanBlueAct(byte turnState, bool isPlayerTurn) => CanAct(turnState, isPlayerTurn);
 

@@ -52,6 +52,7 @@ public static unsafe class UniversalMoveExecutor
         {
             Callback.Fire(&addon->AtkUnitBase, true, 14, (uint)boardPos + ((uint)cardIdx << 16));
             addon->AtkUnitBase.Update(0);
+            addon->TurnState = 0;
             return true;
         }
         catch (Exception ex)
