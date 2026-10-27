@@ -14,7 +14,7 @@ Automates Gold Saucer mini-games and tracks your stats.
 ## Install
 
 1. Dalamud → **Settings** → **Experimental**
-2. Add custom repository: `https://raw.githubusercontent.com/1Stalk/Saucy/master/repo.json`
+2. Add custom repository: `https://raw.githubusercontent.com/1Stalk/DalamudPlugins/main/pluginmaster.json`
 3. Install **Saucy (Cardsharp)** from the plugin installer
 
 ## Games
