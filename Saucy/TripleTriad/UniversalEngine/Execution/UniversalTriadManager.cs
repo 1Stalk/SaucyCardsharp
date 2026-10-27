@@ -66,9 +66,25 @@ public static unsafe class UniversalTriadManager
             return;
         }
 
+        if (Data.TriadCardDB.Get().cards.Count < 50)
+        {
+            TriadGameAgentCardsharp.SyncCardDatabase();
+        }
+
         var mode = C.UniversalTriadTournamentEnabled
             ? UniversalEngineMode.OpenTournamentDraft
             : UniversalEngineMode.UniversalMatch;
+
+        // Midgame activation: if autoplay was toggled on midgame, snapshot current board
+        if (_lastCardsPlacedCount < 0 && state.NumCardsPlaced > 0)
+        {
+            _lastCardsPlacedCount = state.NumCardsPlaced;
+            for (var i = 0; i < 9; i++)
+            {
+                _prevBoardCards[i] = state.BoardCards[i];
+                _prevBoardOwners[i] = state.BoardOwners[i];
+            }
+        }
 
         // Detect board restart (e.g. Sudden Death round 2)
         if (state.NumCardsPlaced == 0 && _lastCardsPlacedCount > 4)
@@ -303,6 +319,8 @@ public static unsafe class UniversalTriadManager
             {
                 Svc.Log.Error(_evalTask.Exception, "[UniversalTriadManager] Solve task faulted");
                 ResetTurn();
+                Status = UniversalEngineStatus.Idle;
+                StatusSummary = "Solve failed, retrying...";
                 return;
             }
 
@@ -389,5 +407,10 @@ public static unsafe class UniversalTriadManager
         _bestPosScore = 0.0f;
         _lastStrategy = "";
         _lastCandidates = [];
+        if (Status == UniversalEngineStatus.Evaluating)
+        {
+            Status = UniversalEngineStatus.Idle;
+            StatusSummary = "Idle";
+        }
     }
 }

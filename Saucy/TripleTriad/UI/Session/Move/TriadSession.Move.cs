@@ -15,6 +15,7 @@ public partial class TriadSession
         if (stateOb == null || !TriadUiState.IsBoardVisible())
         {
             if (UniversalTriadManager.Status != UniversalEngineStatus.Idle &&
+                TriadRunSession.ModuleEnabled &&
                 !C.UniversalTriadAutoplayEnabled &&
                 !C.UniversalTriadTournamentEnabled)
             {
@@ -112,15 +113,21 @@ public partial class TriadSession
 
                 if (hasMove)
                 {
-                    UniversalTriadManager.SetStatus(
-                        UniversalEngineStatus.MoveReady,
-                        $"Ready [Blue]: Card #{moveCardIdx + 1} -> ({moveBoardIdx % 3}, {moveBoardIdx / 3}), EV: {ev:P0} ({evalMs}ms)");
+                    if (CanReportNpcStatus)
+                    {
+                        UniversalTriadManager.SetStatus(
+                            UniversalEngineStatus.MoveReady,
+                            $"Ready [Blue]: Card #{moveCardIdx + 1} -> ({moveBoardIdx % 3}, {moveBoardIdx / 3}), EV: {ev:P0} ({evalMs}ms)");
+                    }
                 }
                 else
                 {
-                    UniversalTriadManager.SetStatus(
-                        UniversalEngineStatus.WaitingTurn,
-                        "No legal moves available");
+                    if (CanReportNpcStatus)
+                    {
+                        UniversalTriadManager.SetStatus(
+                            UniversalEngineStatus.WaitingTurn,
+                            "No legal moves available");
+                    }
                 }
                 return;
             }
@@ -152,7 +159,7 @@ public partial class TriadSession
 
             if (stateOb != null && TriadUiState.IsBoardVisible() && !hasMove && _evalTask == null)
             {
-                if (UniversalTriadManager.Status != UniversalEngineStatus.Executing)
+                if (CanReportNpcStatus && UniversalTriadManager.Status != UniversalEngineStatus.Executing)
                 {
                     UniversalTriadManager.SetStatus(
                         UniversalEngineStatus.WaitingTurn,
@@ -165,17 +172,26 @@ public partial class TriadSession
     public void ResetForNewMatch()
     {
         ClearMove();
-        UniversalTriadManager.Reset();
+        if (CanReportNpcStatus)
+        {
+            UniversalTriadManager.Reset();
+        }
     }
+
+    private static bool CanReportNpcStatus =>
+        TriadRunSession.ModuleEnabled && !C.UniversalTriadAutoplayEnabled && !C.UniversalTriadTournamentEnabled;
 
     private void StartSolverTask()
     {
         _pauseOptimizerForSolver = true;
         UpdateDeckOptimizerPause();
 
-        UniversalTriadManager.SetStatus(
-            UniversalEngineStatus.Evaluating,
-            "Thinking (Blue)...");
+        if (CanReportNpcStatus)
+        {
+            UniversalTriadManager.SetStatus(
+                UniversalEngineStatus.Evaluating,
+                "Thinking (Blue)...");
+        }
 
         var snapshotState = new TriadGameSimulationState(DebugScreenMemory.gameState);
         var solver = DebugScreenMemory.gameSolver;

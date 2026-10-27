@@ -2,6 +2,7 @@ using Saucy.TripleTriad.Data;
 using Saucy.TripleTriad.GameLogic;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Saucy.TripleTriad.UniversalEngine;
 
@@ -20,12 +21,20 @@ public class UniversalDeckSampler
         var db = TriadCardDB.Get();
         if (db.cards.Count < 50)
         {
-            return;
+            TriadGameAgentCardsharp.SyncCardDatabase();
+            db = TriadCardDB.Get();
         }
 
         foreach (var r in Enum.GetValues<ETriadCardRarity>())
         {
-            CardsByRarity[r] = [];
+            if (!CardsByRarity.ContainsKey(r))
+            {
+                CardsByRarity[r] = [];
+            }
+            else
+            {
+                CardsByRarity[r].Clear();
+            }
         }
 
         foreach (var card in db.cards)
@@ -36,7 +45,10 @@ public class UniversalDeckSampler
             }
         }
 
-        _initialized = true;
+        if (db.cards.Count >= 50)
+        {
+            _initialized = true;
+        }
     }
 
     public static List<TriadDeckInstanceScreen> SampleOpponentDecks(
@@ -113,7 +125,9 @@ public class UniversalDeckSampler
             {
                 var handIndex = hiddenIndices[slotIdx];
                 var tier = (slotIdx < neededTiers.Count) ? neededTiers[slotIdx] : ETriadCardRarity.Common;
-                var pool = CardsByRarity[tier];
+                var pool = CardsByRarity.TryGetValue(tier, out var list) && list.Count > 0
+                    ? list
+                    : (CardsByRarity.Values.FirstOrDefault(l => l.Count > 0) ?? []);
 
                 TriadCard? pickedCard = null;
                 if (pool.Count > 0)

@@ -58,7 +58,7 @@ public static unsafe class UniversalStateReader
         {
             LocalPlayerColor = localColor,
             TurnState = (byte)addon->TurnState,
-            IsPlayerTurn = TriadTurnState.ReadIsPlayerTurn(&addon->AtkUnitBase),
+            IsPlayerTurn = TriadTurnState.ReadIsPlayerTurn(&addon->AtkUnitBase, localColor),
             TurnBannerVisible = TriadTurnState.IsTurnBannerVisible(&addon->AtkUnitBase),
             RuleNames = [.. uiState.rules
                 .SelectMany(r => r.Split(['/', ',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))

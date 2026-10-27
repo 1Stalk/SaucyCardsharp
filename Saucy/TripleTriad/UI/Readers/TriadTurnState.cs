@@ -1,5 +1,6 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.GameLogic;
 using System;
 namespace Saucy.TripleTriad.UI;
 
@@ -22,11 +23,14 @@ internal static class TriadTurnState
         "のターン",
         "回合",
         "턴",
-        " ход",
+        " ВАШ ХОД",
+        " ХОД СОПЕРНИКА",
+        " ХОД ПРОТИВНИКА",
+        " ТВОЙ ХОД",
         " хід"
     ];
 
-    public static unsafe bool ReadIsPlayerTurn(AtkUnitBase* unit)
+    public static unsafe bool ReadIsPlayerTurn(AtkUnitBase* unit, ETriadCardOwner localColor = ETriadCardOwner.Blue)
     {
         if (unit is null || unit->AtkValuesCount <= PlayerTurnAtkValueIndex)
         {
@@ -34,7 +38,13 @@ internal static class TriadTurnState
         }
 
         ref var value = ref unit->AtkValues[PlayerTurnAtkValueIndex];
-        return value.Type == AtkValueType.Int && value.Int == 1;
+        if (value.Type != AtkValueType.Int)
+        {
+            return false;
+        }
+
+        var expectedTurnVal = localColor == ETriadCardOwner.Red ? 2 : 1;
+        return value.Int == expectedTurnVal;
     }
 
     public static bool IsBoardPickPhase(byte turnState) => turnState == (byte)TurnState.NormalMove;

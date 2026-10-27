@@ -22,13 +22,22 @@ public static unsafe class UniversalMoveExecutor
             return false;
         }
 
-        if (TriadTurnState.IsTurnBannerVisible(&addon->AtkUnitBase))
+        var elapsedMs = (DateTime.UtcNow - turnStartTime).TotalMilliseconds;
+        if (elapsedMs < delayMs)
         {
             return false;
         }
 
-        var elapsedMs = (DateTime.UtcNow - turnStartTime).TotalMilliseconds;
-        return elapsedMs >= delayMs;
+        // Only allow banner animation to delay move if under 1200ms and in normal board pick phase
+        if (elapsedMs < 1200 && TriadTurnState.IsBoardPickPhase(turnState))
+        {
+            if (TriadTurnState.IsTurnBannerVisible(&addon->AtkUnitBase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static bool Execute(AddonTripleTriad* addon, int cardIdx, int boardPos)
