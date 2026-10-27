@@ -8,6 +8,8 @@ When working for MGP is too much effort.
 
 Automates Gold Saucer mini-games and tracks your stats.
 
+Triple Triad is powered by the [XIVcardsharp](https://github.com/1Stalk/XIVcardsharp) solver.
+
 </div>
 <!-- Repository Header End -->
 
