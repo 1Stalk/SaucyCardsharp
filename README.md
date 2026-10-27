@@ -24,3 +24,10 @@ Triple Triad is powered by the [XIVcardsharp](https://github.com/1Stalk/XIVcards
 Triple Triad · Mini Cactpot · Jumbo Cactpot · Cuff-a-Cur · Out on a Limb · Air Force One · GATE (Slice is Right / Wind Blows)
 
 Open Saucy in-game, pick a game, turn it on. If something needs another plugin, Saucy will tell you.
+
+## Credits & License
+
+SaucyCardsharp is a fork of [PunishXIV/Saucy](https://github.com/PunishXIV/Saucy), originally created by Taurenkey, Kagekazu, and Knightmore.
+
+Licensed under the [BSD 3-Clause License](LICENCE.md).
+
