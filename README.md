@@ -1,8 +1,8 @@
 <!-- Repository Header Begin -->
 <div align="center">
-<img src="images/icon.png" alt="Saucy (Cardsharp)" width="128">
+<img src="images/icon.png" alt="SaucyCardsharp" width="128">
 
-# Saucy (Cardsharp)
+# SaucyCardsharp
 
 When working for MGP is too much effort.
 
@@ -17,7 +17,7 @@ Triple Triad is powered by the [XIVcardsharp](https://github.com/1Stalk/XIVcards
 
 1. Dalamud → **Settings** → **Experimental**
 2. Add custom repository: `https://raw.githubusercontent.com/1Stalk/DalamudPlugins/main/pluginmaster.json`
-3. Install **Saucy (Cardsharp)** from the plugin installer
+3. Install **SaucyCardsharp** from the plugin installer
 
 ## Games
 

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
     <PropertyGroup>
-        <Authors>Puni.sh</Authors>
+        <AssemblyName>SaucyCardsharp</AssemblyName>
+        <PackageId>SaucyCardsharp</PackageId>
+        <Authors>Taurenkey, Kagekazu, Knightmore, 1Stalk</Authors>
         <Version>2.1.2.5</Version>
     </PropertyGroup>
 
@@ -30,7 +32,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="Saucy.json">
+        <None Update="SaucyCardsharp.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
         <None Include="..\images\icon.png" Link="images\icon.png">

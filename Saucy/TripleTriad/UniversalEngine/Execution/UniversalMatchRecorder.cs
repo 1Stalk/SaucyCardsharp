@@ -12,7 +12,7 @@ public static class UniversalMatchRecorder
 {
     private static readonly string LogsDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "XIVLauncher", "pluginConfigs", "Saucy", "UniversalMatchLogs");
+        "XIVLauncher", "pluginConfigs", "SaucyCardsharp", "UniversalMatchLogs");
 
     private static MatchSession? _activeMatch;
 

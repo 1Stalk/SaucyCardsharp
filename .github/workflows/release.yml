@@ -52,8 +52,12 @@ jobs:
           if (-not $ver) { $ver = "2.1.2.5" }
           echo "tag=v$ver" >> $env:GITHUB_OUTPUT
 
-          $packagerZip = "Saucy/bin/x64/Release/Saucy/latest.zip"
+          $packagerZip = "Saucy/bin/x64/Release/SaucyCardsharp/latest.zip"
+          if (-not (Test-Path $packagerZip)) {
+              $packagerZip = "Saucy/bin/x64/Release/Saucy/latest.zip"
+          }
           if (Test-Path $packagerZip) {
+              Copy-Item $packagerZip "SaucyCardsharp.zip" -Force
               Copy-Item $packagerZip "Saucy.zip" -Force
           } else {
               throw "Packaged zip not found at $packagerZip"
@@ -65,9 +69,10 @@ jobs:
           tag_name: ${{ steps.prepare_assets.outputs.tag }}
           name: Release ${{ steps.prepare_assets.outputs.tag }}
           files: |
+            SaucyCardsharp.zip
             Saucy.zip
-            Saucy/bin/x64/Release/Saucy/latest.zip
-            Saucy/bin/x64/Release/Saucy/Saucy.json
+            Saucy/bin/x64/Release/SaucyCardsharp/latest.zip
+            Saucy/bin/x64/Release/SaucyCardsharp/SaucyCardsharp.json
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

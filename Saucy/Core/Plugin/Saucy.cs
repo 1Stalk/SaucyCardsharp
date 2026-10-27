@@ -93,7 +93,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
     {
         ECommonsMain.Init(pluginInterface, this, Module.All);
         _ecommonsReady = true;
-        PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin());
+        PunishLibMain.Init(pluginInterface, "SaucyCardsharp", new AboutPlugin());
         EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
         C.MigrateToBackgroundCpuCores();
@@ -163,7 +163,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
         _initialized = true;
     }
 
-    public string Name => "Saucy";
+    public string Name => "SaucyCardsharp";
     public static Configuration C { get; private set; } = null!;
 
     public ValueTask DisposeAsync()

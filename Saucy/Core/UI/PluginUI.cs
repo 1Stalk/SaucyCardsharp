@@ -252,7 +252,7 @@ public unsafe partial class PluginUI : Window
             case NavItem.MiniCactpot: DrawMiniCactpotPanel(); break;
             case NavItem.JumboCactpot: DrawJumboCactpotPanel(); break;
             case NavItem.Stats: DrawStatsTab(); break;
-            case NavItem.About: AboutTab.Draw("Saucy"); break;
+            case NavItem.About: AboutTab.Draw("SaucyCardsharp"); break;
             case NavItem.Debug: DrawDebugTab(); break;
         }
     }
