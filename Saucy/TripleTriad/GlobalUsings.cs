@@ -4,3 +4,4 @@ global using Saucy.TripleTriad.GameLogic;
 global using Saucy.TripleTriad.UI;
 global using Saucy.TripleTriad.Utils;
 global using Saucy.TripleTriad.UniversalEngine;
+global using XIVcardsharp.Core.State;

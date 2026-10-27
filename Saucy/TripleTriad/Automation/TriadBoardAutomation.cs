@@ -18,11 +18,11 @@ internal static unsafe class TriadBoardAutomation
         {
             boardActiveForSnapshot = false;
             placingCard = false;
-            if (UniversalEngine.UniversalTriadManager.Status != UniversalEngine.UniversalEngineStatus.Idle &&
+            if (UniversalTriadManager.Status != UniversalEngineStatus.Idle &&
                 !C.UniversalTriadAutoplayEnabled &&
                 !C.UniversalTriadTournamentEnabled)
             {
-                UniversalEngine.UniversalTriadManager.Reset();
+                UniversalTriadManager.Reset();
             }
             return false;
         }
@@ -78,16 +78,16 @@ internal static unsafe class TriadBoardAutomation
                 return false;
             }
 
-            UniversalEngine.UniversalTriadManager.SetStatus(
-                UniversalEngine.UniversalEngineStatus.Executing,
+            UniversalTriadManager.SetStatus(
+                UniversalEngineStatus.Executing,
                 $"Placing Card #{which + 1} at ({slot % 3}, {slot / 3})...");
 
             Callback.Fire(&addon->AtkUnitBase, true, 14, (uint)slot + ((uint)which << 16));
             addon->AtkUnitBase.Update(0);
             addon->TurnState = 0;
 
-            UniversalEngine.UniversalTriadManager.SetStatus(
-                UniversalEngine.UniversalEngineStatus.WaitingTurn,
+            UniversalTriadManager.SetStatus(
+                UniversalEngineStatus.WaitingTurn,
                 "Move placed. Waiting for turn end...");
 
             return true;

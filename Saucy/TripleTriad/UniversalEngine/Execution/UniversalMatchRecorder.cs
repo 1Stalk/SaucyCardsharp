@@ -1,10 +1,15 @@
-using Saucy.TripleTriad.GameLogic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using XIVcardsharp.Core.Data;
+using XIVcardsharp.Core.Engine;
+using XIVcardsharp.Core.Solving;
+using XIVcardsharp.Core.State;
+using ETriadCardOwner = XIVcardsharp.Core.Data.ETriadCardOwner;
+using TriadCard = XIVcardsharp.Core.Data.TriadCard;
 
 namespace Saucy.TripleTriad.UniversalEngine;
 
