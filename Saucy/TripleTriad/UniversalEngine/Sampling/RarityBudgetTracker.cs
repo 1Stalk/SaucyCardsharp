@@ -104,37 +104,24 @@ public class RarityBudgetTracker
             ETriadCardRarity.Common
         };
 
-        if (InitialPlayerCards.Count == 5)
+        // Open Tournament draft builds each player deck with:
+        // 1x 5★ (Legendary), 1x 4★ (Epic), 1x 3★ (Rare), 1x 2★ (Uncommon), 1x 1★ (Common).
+        foreach (var rarity in draftTiers)
         {
-            // Mathematical invariant of Open Tournament Draft:
-            // Across both players, there are exactly 2 cards of each tier in the match (total 10 cards).
-            // Therefore, at round start (Normal, Swap, or Sudden Death Round 2):
-            // OpponentExpected(tier) = 2 - PlayerInitial(tier).
-            foreach (var rarity in draftTiers)
-            {
-                var playerCount = InitialPlayerCards.Count(c => c != null && c.Rarity == rarity);
-                expectedRedCounts[rarity] = Math.Max(0, 2 - playerCount);
-            }
+            expectedRedCounts[rarity] = 1;
         }
-        else
-        {
-            // Fallback when 5 initial cards weren't snapshotted
-            foreach (var rarity in draftTiers)
-            {
-                expectedRedCounts[rarity] = 1;
-            }
 
-            if (SwappedTiers.GivenTier.HasValue && SwappedTiers.TakenTier.HasValue)
-            {
-                expectedRedCounts[SwappedTiers.GivenTier.Value]++;
-                expectedRedCounts[SwappedTiers.TakenTier.Value]--;
-            }
+        // Adjust if a Swap occurred
+        if (SwappedTiers.GivenTier.HasValue && SwappedTiers.TakenTier.HasValue)
+        {
+            expectedRedCounts[SwappedTiers.GivenTier.Value]++;
+            expectedRedCounts[SwappedTiers.TakenTier.Value] = Math.Max(0, expectedRedCounts[SwappedTiers.TakenTier.Value] - 1);
         }
 
         var tiers = new List<ETriadCardRarity>();
         foreach (var rarity in draftTiers)
         {
-            var remaining = expectedRedCounts[rarity] - KnownCounts[rarity];
+            var remaining = Math.Max(0, expectedRedCounts[rarity] - KnownCounts[rarity]);
             for (var k = 0; k < remaining; k++)
             {
                 tiers.Add(rarity);

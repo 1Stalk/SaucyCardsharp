@@ -246,8 +246,8 @@ public class TriadGameSimulation
         var resultNeis = new int[4];
         resultNeis[(int)ETriadGameSide.Up] = (boardPosY > 0) ? GetBoardPos(boardPosX, boardPosY - 1) : -1;
         resultNeis[(int)ETriadGameSide.Down] = (boardPosY < (TriadGameSimulationState.boardSize - 1)) ? GetBoardPos(boardPosX, boardPosY + 1) : -1;
-        resultNeis[(int)ETriadGameSide.Right] = (boardPosX > 0) ? GetBoardPos(boardPosX - 1, boardPosY) : -1;
-        resultNeis[(int)ETriadGameSide.Left] = (boardPosX < (TriadGameSimulationState.boardSize - 1)) ? GetBoardPos(boardPosX + 1, boardPosY) : -1;
+        resultNeis[(int)ETriadGameSide.Left] = (boardPosX > 0) ? GetBoardPos(boardPosX - 1, boardPosY) : -1;
+        resultNeis[(int)ETriadGameSide.Right] = (boardPosX < (TriadGameSimulationState.boardSize - 1)) ? GetBoardPos(boardPosX + 1, boardPosY) : -1;
 
         return resultNeis;
     }

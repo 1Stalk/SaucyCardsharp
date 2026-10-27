@@ -29,8 +29,10 @@ public class UniversalTriadSolver
         public float PositionalScore;
     }
 
-    public (int bestCardIdx, int bestBoardPos, float bestEv, List<CandidateMove> candidates) Solve(UniversalTriadState state)
+    public (int bestCardIdx, int bestBoardPos, float bestEv, List<CandidateMove> candidates) Solve(UniversalTriadState state, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var legalMoves = GetLegalMoves(state);
         if (legalMoves.Count == 0)
         {
@@ -65,6 +67,7 @@ public class UniversalTriadSolver
 
             foreach (var move in legalMoves)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var score = minimaxAgent.EvaluateMove(baseSolver, baseGameState, move.CardIdx, move.BoardPos, state.LocalPlayerColor, depthLimit: searchDepth);
                 moveScores[(move.CardIdx, move.BoardPos)] = score;
             }
@@ -74,22 +77,26 @@ public class UniversalTriadSolver
 
         // PIMC: Sample N plausible opponent decks and evaluate in parallel
         var sampledDecks = UniversalDeckSampler.SampleOpponentDecks(state, Mode, SampleCount);
-        var baseSolverInstance = CreateSolver(state);
+        cancellationToken.ThrowIfCancellationRequested();
 
+        var baseSolverInstance = CreateSolver(state);
         using var threadSolvers = new ThreadLocal<TriadGameSolver>(baseSolverInstance.CreateWorkerCopy);
 
         var parallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = MaxThreads <= 0 ? Environment.ProcessorCount : Math.Clamp(MaxThreads, 1, Environment.ProcessorCount)
+            MaxDegreeOfParallelism = MaxThreads <= 0 ? Environment.ProcessorCount : Math.Clamp(MaxThreads, 1, Environment.ProcessorCount),
+            CancellationToken = cancellationToken
         };
 
         Parallel.ForEach(sampledDecks, parallelOptions, sampledDeck =>
         {
+            parallelOptions.CancellationToken.ThrowIfCancellationRequested();
             var solver = threadSolvers.Value!;
             var gameState = BuildInitialGameState(state, sampledDeck);
 
             foreach (var move in legalMoves)
             {
+                parallelOptions.CancellationToken.ThrowIfCancellationRequested();
                 var score = minimaxAgent.EvaluateMove(solver, gameState, move.CardIdx, move.BoardPos, state.LocalPlayerColor, depthLimit: searchDepth);
 
                 moveScores.AddOrUpdate(
@@ -99,6 +106,7 @@ public class UniversalTriadSolver
             }
         });
 
+        cancellationToken.ThrowIfCancellationRequested();
         return SelectBestMove(state, legalMoves, moveScores, sampledDecks.Count);
     }
 
@@ -127,8 +135,7 @@ public class UniversalTriadSolver
         }
 
         var maxEv = candidates.Max(c => c.EV);
-        var isEndgame = state.NumCardsPlaced >= 4;
-        var evTieThreshold = isEndgame ? 0.005f : 0.03f;
+        var evTieThreshold = 0.005f;
 
         // Candidate moves sharing highest EV within threshold
         var topTier = candidates.Where(c => c.EV >= maxEv - evTieThreshold).ToList();

@@ -126,12 +126,8 @@ public class AdversarialMinimaxAgent
         }
         else
         {
-            // Minimizing player (Opponent)
-            // Separate into capturing moves (where Opponent attacks Player) vs peaceful placements
+            // Minimizing player (Opponent plays best adversarial counter-move)
             var minScore = 1.0f;
-            var sumPeacefulScore = 0.0f;
-            var peacefulCount = 0;
-            var hasCapturingMove = false;
 
             for (var cIdx = 0; cIdx < TriadDeckInstance.maxAvailableCards; cIdx++)
             {
@@ -148,55 +144,31 @@ public class AdversarialMinimaxAgent
                     }
 
                     var copyState = new TriadGameSimulationState(state);
-                    var prevLocalCount = CountBoardOwner(state, localPlayerColor);
                     var copyDeck = isBlue ? copyState.deckBlue : copyState.deckRed;
                     if (!solver.simulation.PlaceCard(copyState, cIdx, copyDeck, turnOwner, bIdx))
                     {
                         continue;
                     }
 
-                    var newLocalCount = CountBoardOwner(copyState, localPlayerColor);
-                    var isCapture = newLocalCount < prevLocalCount;
-
                     copyState.forcedCardIdx = -1;
                     var score = Minimax(solver, copyState, currentDepth + 1, depthLimit, alpha, beta, hasOrder, localPlayerColor);
 
-                    if (isCapture)
+                    if (score < minScore)
                     {
-                        hasCapturingMove = true;
-                        if (score < minScore)
-                        {
-                            minScore = score;
-                        }
-                        if (score < beta)
-                        {
-                            beta = score;
-                        }
-                        if (beta <= alpha || beta <= 0.0f)
-                        {
-                            return minScore;
-                        }
+                        minScore = score;
                     }
-                    else
+                    if (score < beta)
                     {
-                        sumPeacefulScore += score;
-                        peacefulCount++;
-                        if (score < minScore)
-                        {
-                            minScore = score;
-                        }
+                        beta = score;
+                    }
+                    if (beta <= alpha || beta <= 0.0f)
+                    {
+                        return minScore;
                     }
                 }
             }
 
-            // If opponent has a direct capture, opponent executes their best counter-move (Min).
-            // If opponent has no capturing moves, use realistic average expected outcome (Expectimax).
-            if (hasCapturingMove)
-            {
-                return minScore;
-            }
-
-            return peacefulCount > 0 ? (sumPeacefulScore / peacefulCount) : minScore;
+            return minScore;
         }
     }
 
@@ -272,19 +244,6 @@ public class AdversarialMinimaxAgent
         {
             count += (value & 1);
             value >>= 1;
-        }
-        return count;
-    }
-
-    private static int CountBoardOwner(TriadGameSimulationState state, ETriadCardOwner owner)
-    {
-        var count = 0;
-        for (var i = 0; i < state.board.Length; i++)
-        {
-            if (state.board[i] != null && state.board[i].owner == owner)
-            {
-                count++;
-            }
         }
         return count;
     }

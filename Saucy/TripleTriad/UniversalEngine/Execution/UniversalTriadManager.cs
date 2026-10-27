@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Saucy.TripleTriad.UniversalEngine;
@@ -19,6 +20,19 @@ public static unsafe class UniversalTriadManager
         Status = status;
         StatusSummary = summary;
     }
+
+    private record EvaluationResult(
+        int CardIdx,
+        int BoardPos,
+        float Ev,
+        float PosScore,
+        int EvalMs,
+        string Strategy,
+        List<UniversalTriadSolver.CandidateMove> Candidates,
+        int NumCardsPlacedAtStart);
+
+    private static Task<EvaluationResult>? _evaluatingTask;
+    private static CancellationTokenSource? _evaluatingCts;
 
     private static DateTime _turnStartTime;
     private static bool _turnStartTracked;
@@ -293,35 +307,85 @@ public static unsafe class UniversalTriadManager
             _turnStartTracked = true;
         }
 
-        // If we don't have a computed move for this turn yet, solve now synchronously (instant 1-5ms)
+        // Check if an existing background evaluation task has finished
+        if (_evaluatingTask != null)
+        {
+            if (!TryProcessCompletedEvaluation(state))
+            {
+                if (_evaluatingTask != null)
+                {
+                    Status = UniversalEngineStatus.Evaluating;
+                    var elapsed = (int)(DateTime.UtcNow - _turnStartTime).TotalMilliseconds;
+                    StatusSummary = $"Thinking ({state.LocalPlayerColor})... ({elapsed}ms)";
+                    return;
+                }
+            }
+        }
+
+        // If we don't have a computed move for this turn yet, launch solve on background thread pool
         if (_bestCardIdx < 0 || _bestBoardPos < 0)
         {
             Status = UniversalEngineStatus.Evaluating;
             StatusSummary = $"Thinking ({state.LocalPlayerColor})...";
 
-            var sampleCount = Math.Clamp(C.UniversalTriadSampleCount, 50, 500);
-            var sw = Stopwatch.StartNew();
-            var solver = new UniversalTriadSolver(mode, sampleCount, SaucyParallelism.UniversalTriadThreads);
-            var (cardIdx, boardPos, ev, candidates) = solver.Solve(state);
-            sw.Stop();
+            // Track Swap rule: if Swap is active, detect which card was given to the opponent and register it in KnownOpponentCards
+            var hasSwap = state.Modifiers.Exists(m => m is TriadGameModifierSwap) ||
+                state.RuleNames.Exists(r =>
+                    r.Contains("Swap", StringComparison.OrdinalIgnoreCase) ||
+                    r.Contains("Échange", StringComparison.OrdinalIgnoreCase) ||
+                    r.Contains("Tausch", StringComparison.OrdinalIgnoreCase) ||
+                    r.Contains("スワップ", StringComparison.OrdinalIgnoreCase) ||
+                    r.Contains("交换", StringComparison.OrdinalIgnoreCase));
 
-            _bestCardIdx = cardIdx;
-            _bestBoardPos = boardPos;
-            _bestEv = ev;
-            _lastEvalMs = (int)sw.ElapsedMilliseconds;
-            _lastCandidates = candidates;
-            _lastStrategy = state.NumCardsPlaced >= 4 ? "Endgame Exhaustive Alpha-Beta (Depth 10)" : (state.NumCardsPlaced <= 1 ? "Opening Adversarial Minimax (Depth 4)" : "Midgame Adversarial Minimax (Depth 6)");
-            var matchingCandidate = _lastCandidates.FirstOrDefault(c => c.CardIdx == _bestCardIdx && c.BoardPos == _bestBoardPos);
-            _bestPosScore = matchingCandidate.PositionalScore;
-
-            if (_bestCardIdx < 0 || _bestBoardPos < 0)
+            if (hasSwap && state.InitialPlayerCards.Count == 5)
             {
-                StatusSummary = "No legal moves available";
-                return;
+                var givenCard = state.InitialPlayerCards.FirstOrDefault(c => c != null && !state.LocalPlayerHand.Any(h => h != null && h.Id == c.Id));
+                if (givenCard != null && !state.KnownOpponentCards.Any(k => k.Id == givenCard.Id))
+                {
+                    state.KnownOpponentCards.Add(givenCard);
+                }
             }
 
-            Status = UniversalEngineStatus.MoveReady;
-            StatusSummary = $"Ready [{state.LocalPlayerColor}]: Card #{_bestCardIdx + 1} -> ({_bestBoardPos % 3}, {_bestBoardPos / 3}), EV: {_bestEv:P0} ({_lastEvalMs}ms)";
+            var sampleCount = Math.Clamp(C.UniversalTriadSampleCount, 50, 500);
+            var maxThreads = SaucyParallelism.UniversalTriadThreads;
+            var stateSnapshot = state.Clone();
+            var cardsPlacedAtStart = state.NumCardsPlaced;
+
+            _evaluatingCts?.Dispose();
+            _evaluatingCts = new CancellationTokenSource();
+            var ct = _evaluatingCts.Token;
+
+            _evaluatingTask = Task.Run(() =>
+            {
+                var sw = Stopwatch.StartNew();
+                var solver = new UniversalTriadSolver(mode, sampleCount, maxThreads);
+                var (cardIdx, boardPos, ev, candidates) = solver.Solve(stateSnapshot, ct);
+                sw.Stop();
+
+                var strategy = stateSnapshot.NumCardsPlaced >= 4
+                    ? "Endgame Exhaustive Alpha-Beta (Depth 10)"
+                    : (stateSnapshot.NumCardsPlaced <= 1
+                        ? "Opening Adversarial Minimax (Depth 4)"
+                        : "Midgame Adversarial Minimax (Depth 6)");
+
+                var matchingCandidate = candidates.FirstOrDefault(c => c.CardIdx == cardIdx && c.BoardPos == boardPos);
+                var posScore = matchingCandidate.PositionalScore;
+
+                return new EvaluationResult(
+                    cardIdx,
+                    boardPos,
+                    ev,
+                    posScore,
+                    (int)sw.ElapsedMilliseconds,
+                    strategy,
+                    candidates,
+                    cardsPlacedAtStart);
+            }, ct);
+
+            if (!TryProcessCompletedEvaluation(state))
+            {
+                return;
+            }
         }
 
         // We have a move ready!
@@ -358,6 +422,53 @@ public static unsafe class UniversalTriadManager
         }
     }
 
+    private static bool TryProcessCompletedEvaluation(UniversalTriadState state)
+    {
+        if (_evaluatingTask == null) return false;
+        if (!_evaluatingTask.IsCompleted) return false;
+
+        if (_evaluatingTask.IsCompletedSuccessfully)
+        {
+            var res = _evaluatingTask.Result;
+            _evaluatingTask = null;
+            _evaluatingCts?.Dispose();
+            _evaluatingCts = null;
+
+            if (res.NumCardsPlacedAtStart == state.NumCardsPlaced)
+            {
+                _bestCardIdx = res.CardIdx;
+                _bestBoardPos = res.BoardPos;
+                _bestEv = res.Ev;
+                _bestPosScore = res.PosScore;
+                _lastEvalMs = res.EvalMs;
+                _lastCandidates = res.Candidates;
+                _lastStrategy = res.Strategy;
+
+                if (_bestCardIdx < 0 || _bestBoardPos < 0)
+                {
+                    Status = UniversalEngineStatus.Evaluating;
+                    StatusSummary = "No legal moves available";
+                    return true;
+                }
+
+                Status = UniversalEngineStatus.MoveReady;
+                StatusSummary = $"Ready [{state.LocalPlayerColor}]: Card #{_bestCardIdx + 1} -> ({_bestBoardPos % 3}, {_bestBoardPos / 3}), EV: {_bestEv:P0} ({_lastEvalMs}ms)";
+                return true;
+            }
+
+            return false;
+        }
+
+        if (_evaluatingTask.IsFaulted && _evaluatingTask.Exception != null)
+        {
+            ECommons.Logging.PluginLog.Error($"[UniversalTriadManager] Solve task faulted: {_evaluatingTask.Exception}");
+        }
+        _evaluatingTask = null;
+        _evaluatingCts?.Dispose();
+        _evaluatingCts = null;
+        return false;
+    }
+
     public static void Reset()
     {
         if (_matchStarted)
@@ -380,6 +491,14 @@ public static unsafe class UniversalTriadManager
 
     private static void ResetTurn()
     {
+        if (_evaluatingCts != null)
+        {
+            try { _evaluatingCts.Cancel(); } catch { }
+            _evaluatingCts.Dispose();
+            _evaluatingCts = null;
+        }
+        _evaluatingTask = null;
+
         _turnStartTracked = false;
         _bestCardIdx = -1;
         _bestBoardPos = -1;
