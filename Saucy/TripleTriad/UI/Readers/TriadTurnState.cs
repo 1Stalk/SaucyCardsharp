@@ -45,13 +45,15 @@ internal static class TriadTurnState
             _ => -1
         };
 
-        if (turnVal < 0)
+        if (turnVal <= 0)
         {
             return false;
         }
 
-        var expectedTurnVal = localColor == ETriadCardOwner.Red ? 2 : 1;
-        return turnVal == expectedTurnVal;
+        // In FFXIV's AddonTripleTriad, AtkValues[23] represents whether the local player's input
+        // is active (1 = active turn, 0 = inactive/waiting for opponent). It does NOT change to 2 for Red.
+        // We check (turnVal is 1 or 2) to ensure both Blue and Red local turns are recognized.
+        return turnVal is 1 or 2;
     }
 
     public static bool IsBoardPickPhase(byte turnState) => turnState == (byte)TurnState.NormalMove;
