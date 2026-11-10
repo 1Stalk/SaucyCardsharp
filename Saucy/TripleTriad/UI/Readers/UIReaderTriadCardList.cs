@@ -152,17 +152,19 @@ public unsafe class UIReaderTriadCardList : IUIReader
                                cachedState.selectionMasked != newSelectionMasked ||
                                cachedState.iconId != addon->CardIconId ||
                                cachedState.numU != addon->NumSideU ||
-                               cachedState.numL != addon->NumSideL ||
+                               cachedState.numL != addon->NumSideR ||
                                cachedState.numD != addon->NumSideD ||
-                               cachedState.numR != addon->NumSideR ||
+                               cachedState.numR != addon->NumSideL ||
                                cachedState.rarity != addon->CardRarity ||
                                cachedState.type != (byte)addon->CardType ||
                                cachedState.selectedCardId != selectedCardId;
 
         cachedState.numU = addon->NumSideU;
-        cachedState.numL = addon->NumSideL;
+        // In AddonGSInfoCardList:
+        // offset 0x2A3: Up, 0x2A4: Down, 0x2A5: Left (named NumSideR), 0x2A6: Right (named NumSideL)
+        cachedState.numL = addon->NumSideR;
         cachedState.numD = addon->NumSideD;
-        cachedState.numR = addon->NumSideR;
+        cachedState.numR = addon->NumSideL;
         cachedState.rarity = addon->CardRarity;
         cachedState.type = (byte)addon->CardType;
         cachedState.iconId = addon->CardIconId;
@@ -410,9 +412,9 @@ public unsafe class UIReaderTriadCardList : IUIReader
         }
 
         return addon->NumSideU == expectedCard.Sides[0] &&
-               addon->NumSideL == expectedCard.Sides[1] &&
+               addon->NumSideR == expectedCard.Sides[1] &&
                addon->NumSideD == expectedCard.Sides[2] &&
-               addon->NumSideR == expectedCard.Sides[3];
+               addon->NumSideL == expectedCard.Sides[3];
     }
 
     private static nint ResolveAddonPtr()

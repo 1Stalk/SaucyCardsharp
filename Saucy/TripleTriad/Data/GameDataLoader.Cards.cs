@@ -78,7 +78,7 @@ public partial class GameDataLoader
                     var cardType = (rowTypeId < cardTypeMap.Length) ? cardTypeMap[rowTypeId] : ETriadCardType.None;
                     var cardRarity = (rowRarityId < cardRarityMap.Length) ? cardRarityMap[rowRarityId] : ETriadCardRarity.Common;
 
-                    var cardOb = new TriadCard((int)idx, cardRarity, cardType, rowData.Value.Top, rowData.Value.Bottom, rowData.Value.Right, rowData.Value.Left, rowData.Value.Order, rowData.Value.UIPriority)
+                    var cardOb = new TriadCard((int)idx, cardRarity, cardType, rowData.Value.Top, rowData.Value.Bottom, rowData.Value.Left, rowData.Value.Right, rowData.Value.Order, rowData.Value.UIPriority)
                     {
                         Name = rowName.Value.Name.ToString()
                     };

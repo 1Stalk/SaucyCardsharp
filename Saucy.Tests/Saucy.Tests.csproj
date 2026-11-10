@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Saucy\Saucy.csproj" />
+    <ProjectReference Include="..\XIVcardsharp\XIVcardsharp.Core\XIVcardsharp.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Dalamud">
+      <HintPath>C:\Users\PC\AppData\Roaming\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
+    </Reference>
+    <Reference Include="FFXIVClientStructs">
+      <HintPath>C:\Users\PC\AppData\Roaming\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+    </Reference>
+    <Reference Include="InteropGenerator.Runtime">
+      <HintPath>C:\Users\PC\AppData\Roaming\XIVLauncher\addon\Hooks\dev\InteropGenerator.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Lumina">
+      <HintPath>C:\Users\PC\AppData\Roaming\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
+    </Reference>
+    <Reference Include="Lumina.Excel">
+      <HintPath>C:\Users\PC\AppData\Roaming\XIVLauncher\addon\Hooks\dev\Lumina.Excel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

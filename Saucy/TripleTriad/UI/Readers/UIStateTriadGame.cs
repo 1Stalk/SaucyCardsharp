@@ -52,11 +52,47 @@ public class UIStateTriadCard : IEquatable<UIStateTriadCard>
             return ctx.cards.hiddenCard;
         }
 
+        // 1. Try texture first if available to disambiguate duplicate-stat cards or provide exact card ID
+        if (!string.IsNullOrEmpty(texturePath))
+        {
+            var texCard = ctx.ParseCard(texturePath, markFailed: false);
+            if (texCard != null && texCard.IsValid())
+            {
+                return texCard;
+            }
+        }
+
         var cardType = GameDataLoader.ConvertToTriadType(type);
         var cardRarity = GameDataLoader.ConvertToTriadRarity(rarity);
 
-        return ctx.ParseCard(numU, numL, numD, numR, cardType, cardRarity, markFailed) ??
-               ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "", markFailed);
+        // 2. Try matching with exact type and rarity (without flagging parse error if this first pass fails)
+        var card = ctx.ParseCard(numU, numL, numD, numR, cardType, cardRarity, markFailed: false);
+        if (card != null && card.IsValid())
+        {
+            return card;
+        }
+
+        // 3. Try matching by stats and texture disambiguation
+        card = ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "", markFailed: false);
+        if (card != null && card.IsValid())
+        {
+            return card;
+        }
+
+        // 4. Fallback directly to stats in case SameNumberId >= 0 but texture was not available
+        var statCard = ctx.cards.Find(numU, numL, numD, numR);
+        if (statCard != null && statCard.IsValid())
+        {
+            return statCard;
+        }
+
+        // 5. If all matching attempts failed, mark error if requested
+        if (markFailed)
+        {
+            ctx.OnFailedCard($"[{numU}-{numL}-{numD}-{numR}], type:{cardType}, rarity:{cardRarity}, tex:{texturePath}");
+        }
+
+        return null;
     }
 }
 

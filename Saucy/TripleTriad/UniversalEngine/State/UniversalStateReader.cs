@@ -200,35 +200,53 @@ public static unsafe class UniversalStateReader
             return coreDb.hiddenCard;
         }
 
-        // 1. Try parsing through standard GameUIParser and map to coreDb
-        var card = cardState.ToTriadCard(parser, markFailed: false);
-        if (card != null && card.IsValid() && card.Id >= 0 && card.Id < coreDb.cards.Count && coreDb.cards[card.Id] != null)
+        // 1. Try texture first if available to disambiguate duplicate-stat cards or provide exact card ID
+        if (!string.IsNullOrEmpty(cardState.texturePath))
         {
-            return coreDb.cards[card.Id];
+            var texCard = coreDb.FindByTexture(cardState.texturePath);
+            if (texCard != null && texCard.IsValid())
+            {
+                return texCard;
+            }
         }
 
-        // 2. Fallback: Lookup by sides directly in CoreCardDB
+        // 2. Try parsing through standard GameUIParser and map to coreDb
+        var card = cardState.ToTriadCard(parser, markFailed: false);
+        if (card != null && card.IsValid())
+        {
+            var matchedCore = coreDb.FindById(card.Id);
+            if (matchedCore != null && matchedCore.IsValid())
+            {
+                return matchedCore;
+            }
+        }
+
+        var cardType = GameDataLoader.ConvertToTriadType(cardState.type);
+        var cardRarity = GameDataLoader.ConvertToTriadRarity(cardState.rarity);
+
+        // 3. Disambiguate with exact type and rarity
+        var exactFallback = coreDb.Find(
+            cardState.numU,
+            cardState.numL,
+            cardState.numD,
+            cardState.numR,
+            (CoreCardType)Math.Clamp((int)cardType, 0, 4),
+            (CoreCardRarity)Math.Clamp((int)cardRarity, 0, 4));
+        if (exactFallback != null && exactFallback.IsValid())
+        {
+            return exactFallback;
+        }
+
+        // 4. Fallback: Lookup by sides directly in CoreCardDB
         var fallback = coreDb.Find(cardState.numU, cardState.numL, cardState.numD, cardState.numR);
         if (fallback != null && fallback.IsValid())
         {
             return fallback;
         }
 
-        // 3. Fallback: Lookup by texture path directly in CoreCardDB
-        if (!string.IsNullOrEmpty(cardState.texturePath))
-        {
-            var texFallback = coreDb.FindByTexture(cardState.texturePath);
-            if (texFallback != null && texFallback.IsValid())
-            {
-                return texFallback;
-            }
-        }
-
-        // 4. Bulletproof Fallback: Construct synthetic core card from memory stats so board tile is never null
+        // 5. Bulletproof Fallback: Construct synthetic core card from memory stats so board tile is never null
         if (cardState.numU > 0 && cardState.numL > 0 && cardState.numD > 0 && cardState.numR > 0)
         {
-            var cardType = GameDataLoader.ConvertToTriadType(cardState.type);
-            var cardRarity = GameDataLoader.ConvertToTriadRarity(cardState.rarity);
             return new CoreCard(
                 -1,
                 (CoreCardRarity)Math.Clamp((int)cardRarity, 0, 4),

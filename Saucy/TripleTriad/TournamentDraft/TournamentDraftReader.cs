@@ -170,16 +170,26 @@ public static unsafe class TournamentDraftReader
             return null;
         }
 
-        // Try lookup in TriadCardDB
-        var matched = TriadCardDB.Get().Find(numU, numL, numD, numR);
+        TriadCard? matched = null;
+        var texNode = cardComp->UldManager.SearchNodeById(21);
+        if (texNode != null)
+        {
+            var texPath = GUINodeUtils.GetNodeTexturePath(texNode);
+            if (!string.IsNullOrEmpty(texPath))
+            {
+                matched = TriadCardDB.Get().FindByTexture(texPath);
+            }
+        }
+
+        matched ??= TriadCardDB.Get().Find(numU, numL, numD, numR);
         if (matched != null)
         {
             return new TournamentDraftCard(
                 matched.Name,
-                numU,
-                numL,
-                numD,
-                numR,
+                matched.Sides[(int)ETriadGameSide.Up],
+                matched.Sides[(int)ETriadGameSide.Left],
+                matched.Sides[(int)ETriadGameSide.Down],
+                matched.Sides[(int)ETriadGameSide.Right],
                 (int)matched.Rarity,
                 matched.Type.ToString());
         }

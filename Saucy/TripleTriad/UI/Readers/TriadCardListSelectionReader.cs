@@ -422,11 +422,13 @@ internal static unsafe class TriadCardListSelectionReader
             return -1;
         }
 
+        // In AddonGSInfoCardList:
+        // offset 0x2A3: Up, 0x2A4: Down, 0x2A5: Left (named NumSideR), 0x2A6: Right (named NumSideL)
         var card = TriadCardDB.Get().Find(
             addon->NumSideU,
-            addon->NumSideL,
-            addon->NumSideD,
             addon->NumSideR,
+            addon->NumSideD,
+            addon->NumSideL,
             (ETriadCardType)addon->CardType,
             (ETriadCardRarity)addon->CardRarity);
         return card?.Id ?? -1;

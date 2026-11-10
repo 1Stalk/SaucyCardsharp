@@ -63,7 +63,7 @@ public static unsafe class UniversalTriadManager
             return;
         }
 
-        if (Data.TriadCardDB.Get().cards.Count < 50)
+        if (XIVcardsharp.Core.Data.TriadCardDB.Get().cards.Count < 50)
         {
             TriadGameAgentCardsharp.SyncCardDatabase();
         }

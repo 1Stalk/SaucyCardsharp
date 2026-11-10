@@ -8,4 +8,7 @@
   <Project Path="Saucy/Saucy.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="Saucy.Tests/Saucy.Tests.csproj">
+    <Platform Project="x64" />
+  </Project>
 </Solution>

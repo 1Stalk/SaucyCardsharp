@@ -38,13 +38,13 @@ public class TriadGameAgentCardsharp : TriadGameAgent
         return _solver;
     }
 
-    public static void SyncCardDatabase()
+    public static void ResetCardDatabaseSync()
     {
-        if (_cardDbSynced)
-        {
-            return;
-        }
+        _cardDbSynced = false;
+    }
 
+    public static void SyncCardDatabase(bool force = false)
+    {
         var saucyCards = Data.TriadCardDB.Get().cards;
         if (saucyCards == null || saucyCards.Count == 0)
         {
@@ -52,6 +52,11 @@ public class TriadGameAgentCardsharp : TriadGameAgent
         }
 
         var coreDb = XIVcardsharp.Core.Data.TriadCardDB.Get();
+        if (!force && _cardDbSynced && coreDb.cards.Count == saucyCards.Count)
+        {
+            return;
+        }
+
         coreDb.cards.Clear();
         coreDb.sameNumberMap.Clear();
 
@@ -142,13 +147,14 @@ public class TriadGameAgentCardsharp : TriadGameAgent
             var isAvailable = (gameState.deckBlue.availableCardMask & (1 << i)) != 0;
             state.BlueCardPlaced[i] = !isAvailable;
 
-            if (card != null && card.Id > 0 && card.Id < coreDb.cards.Count)
+            var coreCard = (card != null && card.Id > 0) ? coreDb.FindById(card.Id) : null;
+            if (coreCard != null)
             {
-                state.BlueHand[i] = coreDb.cards[card.Id];
+                state.BlueHand[i] = coreCard;
                 state.BlueCardRevealed[i] = true;
-                if (!state.KnownBlueCards.Contains(state.BlueHand[i]!))
+                if (!state.KnownBlueCards.Contains(coreCard))
                 {
-                    state.KnownBlueCards.Add(state.BlueHand[i]!);
+                    state.KnownBlueCards.Add(coreCard);
                 }
             }
             else
@@ -169,13 +175,14 @@ public class TriadGameAgentCardsharp : TriadGameAgent
             var isAvailable = (gameState.deckRed.availableCardMask & (1 << i)) != 0;
             state.RedCardPlaced[i] = !isAvailable;
 
-            if (card != null && card.Id > 0 && card.Id < coreDb.cards.Count)
+            var coreCard = (card != null && card.Id > 0) ? coreDb.FindById(card.Id) : null;
+            if (coreCard != null)
             {
-                state.RedHand[i] = coreDb.cards[card.Id];
+                state.RedHand[i] = coreCard;
                 state.RedCardRevealed[i] = true;
-                if (!state.KnownRedCards.Contains(state.RedHand[i]!))
+                if (!state.KnownRedCards.Contains(coreCard))
                 {
-                    state.KnownRedCards.Add(state.RedHand[i]!);
+                    state.KnownRedCards.Add(coreCard);
                 }
             }
             else
@@ -194,9 +201,9 @@ public class TriadGameAgentCardsharp : TriadGameAgent
         {
             foreach (var c in gameState.deckRed.deck.knownCards)
             {
-                if (c != null && c.Id > 0 && c.Id < coreDb.cards.Count)
+                if (c != null && c.Id > 0)
                 {
-                    var coreC = coreDb.cards[c.Id];
+                    var coreC = coreDb.FindById(c.Id);
                     if (coreC != null && !state.KnownRedCards.Contains(coreC))
                     {
                         state.KnownRedCards.Add(coreC);
@@ -205,9 +212,9 @@ public class TriadGameAgentCardsharp : TriadGameAgent
             }
             foreach (var c in gameState.deckRed.deck.unknownCardPool)
             {
-                if (c != null && c.Id > 0 && c.Id < coreDb.cards.Count)
+                if (c != null && c.Id > 0)
                 {
-                    var coreC = coreDb.cards[c.Id];
+                    var coreC = coreDb.FindById(c.Id);
                     if (coreC != null && !state.KnownRedCards.Contains(coreC))
                     {
                         state.KnownRedCards.Add(coreC);
@@ -230,10 +237,11 @@ public class TriadGameAgentCardsharp : TriadGameAgent
         for (var i = 0; i < 9; i++)
         {
             var cardInstance = gameState.board[i];
-            if (cardInstance?.card != null && cardInstance.card.Id > 0 && cardInstance.card.Id < coreDb.cards.Count)
+            var coreCard = (cardInstance?.card != null && cardInstance.card.Id > 0) ? coreDb.FindById(cardInstance.card.Id) : null;
+            if (coreCard != null)
             {
-                state.BoardCards[i] = coreDb.cards[cardInstance.card.Id];
-                state.BoardOwners[i] = (CoreOwner)cardInstance.owner;
+                state.BoardCards[i] = coreCard;
+                state.BoardOwners[i] = (CoreOwner)cardInstance!.owner;
                 state.NumCardsPlaced++;
             }
             else

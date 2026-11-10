@@ -269,9 +269,13 @@ public class UIReaderTriadGame : IUIReader
             if (isKnown)
             {
                 resultOb.numU = addonCard.NumSideU;
-                resultOb.numL = addonCard.NumSideL;
+                // In FFXIV's native TripleTriadCard memory struct, side stats are located at:
+                // offset 0x83: Top (Up), offset 0x84: Bottom (Down), offset 0x85: Left, offset 0x86: Right.
+                // FFXIVClientStructs reversed offsets 0x85 and 0x86 (naming 0x85 NumSideR and 0x86 NumSideL).
+                // Therefore, addonCard.NumSideR corresponds to game Left, and addonCard.NumSideL corresponds to game Right.
+                resultOb.numL = addonCard.NumSideR;
                 resultOb.numD = addonCard.NumSideD;
-                resultOb.numR = addonCard.NumSideR;
+                resultOb.numR = addonCard.NumSideL;
                 resultOb.rarity = addonCard.CardRarity;
                 resultOb.type = (byte)addonCard.CardType;
 

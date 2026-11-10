@@ -1,6 +1,7 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 namespace Saucy.TripleTriad.GameLogic;
 
 public enum ETriadDeckState
@@ -164,7 +165,7 @@ public class TriadDeck
     {
         deckId = "K";
 
-        List<TriadCard> sortedList = [.. knownCards];
+        List<TriadCard> sortedList = [.. knownCards.Where(c => c != null)];
         sortedList.Sort((a, b) => a.Id.CompareTo(b.Id));
 
         foreach (var card in sortedList)
@@ -176,7 +177,7 @@ public class TriadDeck
         deckId += "U";
 
         sortedList.Clear();
-        sortedList.AddRange(unknownCardPool);
+        sortedList.AddRange(unknownCardPool.Where(c => c != null));
         sortedList.Sort((a, b) => a.Id.CompareTo(b.Id));
 
         foreach (var card in sortedList)
