@@ -11,4 +11,5 @@
   <Project Path="Saucy.Tests/Saucy.Tests.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="XIVcardsharp/XIVcardsharp.Core/XIVcardsharp.Core.csproj" />
 </Solution>
