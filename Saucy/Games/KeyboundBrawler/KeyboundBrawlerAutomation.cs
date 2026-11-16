@@ -22,7 +22,7 @@ namespace Saucy.KeyboundBrawler;
 public sealed class KeyboundBrawlerModule : Module
 {
     public override string InternalName => ModuleNames.KeyboundBrawler;
-    public override string Name         => "Keybound Brawler";
+    public override string Name => "Keybound Brawler";
 
     public override void Enable() => Svc.Framework.Update += OnFrameworkUpdate;
 
@@ -37,43 +37,43 @@ public sealed class KeyboundBrawlerModule : Module
 
 internal static unsafe class KeyboundBrawlerAutomation
 {
-    private const  string UseWordActionSignature   = "48 89 5C 24 18 56 57 41 56 48 83 EC 40 48 8B 1D ?? ?? ?? ?? 4C 8B F2 48 8B F1";
-    private const  uint   MgpItemId                = 29;
-    private const  uint   MgcItemId                = 52322;
-    private const  uint   QueueNpcBaseId           = 1058751;
-    private const  uint   QueueAcceptButtonId      = 9;
-    private const  uint   ResultCloseButtonId      = 48;
-    private const  uint   CursedGazeActionId       = 49529;
-    private const  uint   SensoryJammerActionId    = 49532;
-    private const  uint   SensoryJammerAltActionId = 49702;
-    private const  int    ForbiddenCastWindowMs    = 500;
-    private const  int    PostCastDelayMs           = 3000;
-    private static nint   useWordActionAddress;
-    private static bool   scanAttempted;
-    private static uint   pendingEntityId;
-    private static string pendingWord      = "";
+    private const string UseWordActionSignature = "48 89 5C 24 18 56 57 41 56 48 83 EC 40 48 8B 1D ?? ?? ?? ?? 4C 8B F2 48 8B F1";
+    private const uint MgpItemId = 29;
+    private const uint MgcItemId = 52322;
+    private const uint QueueNpcBaseId = 1058751;
+    private const uint QueueAcceptButtonId = 9;
+    private const uint ResultCloseButtonId = 48;
+    private const uint CursedGazeActionId = 49529;
+    private const uint SensoryJammerActionId = 49532;
+    private const uint SensoryJammerAltActionId = 49702;
+    private const int ForbiddenCastWindowMs = 500;
+    private const int PostCastDelayMs = 3000;
+    private static nint useWordActionAddress;
+    private static bool scanAttempted;
+    private static uint pendingEntityId;
+    private static string pendingWord = "";
     private static string pendingAlternate = "";
-    private static long   pendingReadyAt;
-    private static long   pendingTypingDurationMs;
-    private static long   wordEntryResumeAt = -1;
-    private static long   forbiddenCastBlockUntil;
-    private static long   lastInactivityResetAt;
-    private static bool   awaitingQueueDialogue;
-    private static bool   queueFlowActive, queueRequested, queueAcceptClicked;
-    private static bool   ownsQueuePath;
-    private static long   queueDialogueDeadline;
-    private static long   queueRetryAt;
-    private static long   nextQueueAt;
-    private static long   nextQueueMoveAt;
-    private static bool   wasInDuty,    roundTracked, resultRecorded;
-    private static int    lastMgp = -1, lastMgc = -1;
-    private static long   rewardUntil;
+    private static long pendingReadyAt;
+    private static long pendingTypingDurationMs;
+    private static long wordEntryResumeAt = -1;
+    private static long forbiddenCastBlockUntil;
+    private static long lastInactivityResetAt;
+    private static bool awaitingQueueDialogue;
+    private static bool queueRequested, queueAcceptClicked;
+    private static bool ownsQueuePath;
+    private static long queueDialogueDeadline;
+    private static long queueRetryAt;
+    private static long nextQueueAt;
+    private static long nextQueueMoveAt;
+    private static bool wasInDuty, roundTracked, resultRecorded;
+    private static int lastMgp = -1, lastMgc = -1;
+    private static long rewardUntil;
 
-    internal static bool   ScanFailed  => scanAttempted && useWordActionAddress == 0;
+    internal static bool ScanFailed => scanAttempted && useWordActionAddress == 0;
     internal static string QueueStatus { get; private set; } = "Looking for entry NPC";
 
     internal static bool IsInActiveMinigame => GetDirector() != 0;
-    internal static bool IsAutoQueueFlowActive => queueFlowActive;
+    internal static bool IsAutoQueueFlowActive { get; private set; }
     private static long RequeueDelayMs => (long)Math.Max(0, C.KeyboundBrawlerRequeueDelaySeconds) * 1000;
 
     internal static void OnUpdate()
@@ -85,29 +85,29 @@ internal static unsafe class KeyboundBrawlerAutomation
 
     internal static void Reset()
     {
-        pendingEntityId       = 0;
+        pendingEntityId = 0;
         pendingTypingDurationMs = 0;
-        wordEntryResumeAt      = -1;
+        wordEntryResumeAt = -1;
         forbiddenCastBlockUntil = 0;
         lastInactivityResetAt = 0;
-        wasInDuty             = roundTracked = resultRecorded = false;
-        lastMgp               = lastMgc      = -1;
+        wasInDuty = roundTracked = resultRecorded = false;
+        lastMgp = lastMgc = -1;
         awaitingQueueDialogue = false;
-        queueFlowActive = queueRequested = queueAcceptClicked = false;
-        queueRetryAt          = nextQueueAt = nextQueueMoveAt = 0;
+        IsAutoQueueFlowActive = queueRequested = queueAcceptClicked = false;
+        queueRetryAt = nextQueueAt = nextQueueMoveAt = 0;
         StopQueuePath();
         QueueStatus = "Looking for entry NPC";
     }
 
     private static void TickRewards()
     {
-        var inDuty    = GetDirector() != 0;
+        var inDuty = GetDirector() != 0;
         var inventory = InventoryManager.Instance();
         if (inDuty && !wasInDuty)
         {
-            roundTracked   = true;
+            roundTracked = true;
             resultRecorded = false;
-            lastMgp        = lastMgc = -1;
+            lastMgp = lastMgc = -1;
         }
 
         wasInDuty = inDuty;
@@ -132,8 +132,8 @@ internal static unsafe class KeyboundBrawlerAutomation
             }
 
             resultRecorded = true;
-            rewardUntil    = Environment.TickCount64 + 15000;
-            nextQueueAt    = Environment.TickCount64 + RequeueDelayMs;
+            rewardUntil = Environment.TickCount64 + 15000;
+            nextQueueAt = Environment.TickCount64 + RequeueDelayMs;
             StatsSessionClock.MarkBrawlerActive();
             C.UpdateStats(stats => stats.BrawlerGamesPlayed++);
             C.Save();
@@ -173,7 +173,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         if (director == 0 || *((byte*)director + 0x1FC0) == 0)
         {
             wordEntryResumeAt = director == 0 ? -1 : 0;
-            pendingEntityId       = 0;
+            pendingEntityId = 0;
             if (director == 0) forbiddenCastBlockUntil = 0;
             lastInactivityResetAt = 0;
             return;
@@ -232,17 +232,17 @@ internal static unsafe class KeyboundBrawlerAutomation
             return;
         }
 
-        var         bestPriority        = -1;
-        var         bestLength          = int.MaxValue;
-        var         bestDistance        = float.MaxValue;
-        uint        bestEntityId        = 0;
-        GameObject* bestObject          = null;
-        var         bestWord            = "";
-        var         bestAlternate       = "";
-        GameObject* pendingObject       = null;
-        var         pendingPriority     = -1;
-        var         player              = Svc.Objects.LocalPlayer;
-        var         objectManager       = GameObjectManager.Instance();
+        var bestPriority = -1;
+        var bestLength = int.MaxValue;
+        var bestDistance = float.MaxValue;
+        uint bestEntityId = 0;
+        GameObject* bestObject = null;
+        var bestWord = "";
+        var bestAlternate = "";
+        GameObject* pendingObject = null;
+        var pendingPriority = -1;
+        var player = Svc.Objects.LocalPlayer;
+        var objectManager = GameObjectManager.Instance();
         if (objectManager == null)
         {
             pendingEntityId = 0;
@@ -252,7 +252,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         foreach (var entityId in words->Keys)
         {
             var gameObject = objectManager->Objects.GetObjectByEntityId(entityId);
-            if (gameObject             == null                 ||
+            if (gameObject == null ||
                 gameObject->ObjectKind != ObjectKind.BattleNpc ||
                 !words->TryGetValuePointer(in entityId, out var entry))
             {
@@ -263,7 +263,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             var cast = character == null
                                ? null
                                : character->GetCastInfo();
-            if (cast != null    &&
+            if (cast != null &&
                 cast->IsCasting &&
                 cast->ActionId is CursedGazeActionId or SensoryJammerActionId or SensoryJammerAltActionId)
             {
@@ -287,9 +287,9 @@ internal static unsafe class KeyboundBrawlerAutomation
                 continue;
             }
 
-            var word      = entry->Word.ToString();
+            var word = entry->Word.ToString();
             var alternate = entry->AlternateWord.ToString();
-            var length    = word.Length == 0 ? alternate.Length : alternate.Length == 0 ? word.Length : Math.Min(word.Length, alternate.Length);
+            var length = word.Length == 0 ? alternate.Length : alternate.Length == 0 ? word.Length : Math.Min(word.Length, alternate.Length);
             if (length == 0 || entry->BubbleType == 3)
             {
                 continue;
@@ -298,7 +298,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             var priority = BubblePriority(entry);
             if (entityId == pendingEntityId && word == pendingWord && alternate == pendingAlternate)
             {
-                pendingObject   = gameObject;
+                pendingObject = gameObject;
                 pendingPriority = priority;
             }
 
@@ -312,20 +312,20 @@ internal static unsafe class KeyboundBrawlerAutomation
                 continue;
             }
 
-            bestPriority  = priority;
-            bestLength    = length;
-            bestDistance  = distance;
-            bestEntityId  = entityId;
-            bestObject    = gameObject;
-            bestWord      = word;
+            bestPriority = priority;
+            bestLength = length;
+            bestDistance = distance;
+            bestEntityId = entityId;
+            bestObject = gameObject;
+            bestWord = word;
             bestAlternate = alternate;
         }
 
         if (pendingObject != null && pendingPriority == bestPriority)
         {
-            bestEntityId  = pendingEntityId;
-            bestObject    = pendingObject;
-            bestWord      = pendingWord;
+            bestEntityId = pendingEntityId;
+            bestObject = pendingObject;
+            bestWord = pendingWord;
             bestAlternate = pendingAlternate;
         }
 
@@ -337,8 +337,8 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (pendingEntityId != bestEntityId || pendingWord != bestWord || pendingAlternate != bestAlternate)
         {
-            pendingEntityId  = bestEntityId;
-            pendingWord      = bestWord;
+            pendingEntityId = bestEntityId;
+            pendingWord = bestWord;
             pendingAlternate = bestAlternate;
             var min = Math.Clamp(C.KeyboundBrawlerMinMsPerCharacter, 100, 2000);
             var max = Math.Clamp(C.KeyboundBrawlerMaxMsPerCharacter, min, 2000);
@@ -378,7 +378,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             if (C.KeyboundBrawlerAutoQueue)
             {
-                queueFlowActive = true;
+                IsAutoQueueFlowActive = true;
                 YesAlready.SyncForGameActivity(true);
             }
 
@@ -390,9 +390,9 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (!C.KeyboundBrawlerAutoQueue)
         {
-            queueFlowActive = queueRequested = queueAcceptClicked = false;
+            IsAutoQueueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
-            queueRetryAt          = 0;
+            queueRetryAt = 0;
             StopQueuePath();
             return;
         }
@@ -401,7 +401,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             Svc.Condition[ConditionFlag.BetweenAreas] ||
             Svc.Condition[ConditionFlag.BoundByDuty95])
         {
-            queueFlowActive = queueRequested = queueAcceptClicked = false;
+            IsAutoQueueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
             queueRetryAt = 0;
             StopQueuePath();
@@ -443,7 +443,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
             if (state == ContentsFinderQueueState.None && now >= queueRetryAt)
             {
-                queueFlowActive = queueRequested = queueAcceptClicked = false;
+                IsAutoQueueFlowActive = queueRequested = queueAcceptClicked = false;
                 queueRetryAt = now + RequeueDelayMs;
                 QueueStatus = "Queue ended - retrying";
                 return;
@@ -456,7 +456,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         if (Svc.Condition[ConditionFlag.WaitingForDuty] ||
             Svc.Condition[ConditionFlag.WaitingForDutyFinder])
         {
-            queueFlowActive = false;
+            IsAutoQueueFlowActive = false;
             awaitingQueueDialogue = false;
             StopQueuePath();
             QueueStatus = "Queued or entering Brawler";
@@ -466,7 +466,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("KTGEnterDialogue")
                                          .Address;
-            if (addon != null    &&
+            if (addon != null &&
                 addon->IsVisible &&
                 AgentHelper.IsAddonOwnedBy(addon, AgentId.KTGEnterDialogue))
             {
@@ -475,8 +475,8 @@ internal static unsafe class KeyboundBrawlerAutomation
                     awaitingQueueDialogue = false;
                     queueRequested = true;
                     queueAcceptClicked = false;
-                    queueRetryAt          = now + 30000;
-                    QueueStatus           = "Entry accepted - waiting for queue";
+                    queueRetryAt = now + 30000;
+                    QueueStatus = "Entry accepted - waiting for queue";
                 }
                 else
                 {
@@ -493,7 +493,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             }
 
             awaitingQueueDialogue = false;
-            queueRetryAt          = now + RequeueDelayMs;
+            queueRetryAt = now + RequeueDelayMs;
         }
 
         if (now < queueRetryAt)
@@ -504,7 +504,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (now < nextQueueAt)
         {
-            queueFlowActive = false;
+            IsAutoQueueFlowActive = false;
             QueueStatus = "Waiting before next Brawler queue";
             return;
         }
@@ -512,13 +512,13 @@ internal static unsafe class KeyboundBrawlerAutomation
         var npc = ObjectHelper.FindNearestByBaseId(QueueNpcBaseId);
         if (npc == null)
         {
-            queueFlowActive = false;
+            IsAutoQueueFlowActive = false;
             StopQueuePath();
             QueueStatus = "Entry NPC is not loaded";
             return;
         }
 
-        queueFlowActive = true;
+        IsAutoQueueFlowActive = true;
         YesAlready.SyncForGameActivity(true);
         if (!Player.Interactable)
         {
@@ -578,7 +578,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             awaitingQueueDialogue = true;
             queueDialogueDeadline = now + 8000;
-            QueueStatus           = "Waiting for entry dialogue";
+            QueueStatus = "Waiting for entry dialogue";
         }
         else
         {
@@ -619,9 +619,9 @@ internal static unsafe class KeyboundBrawlerAutomation
     [StructLayout(LayoutKind.Explicit, Size = 0x180)]
     private struct HudTarget
     {
-        [FieldOffset(0x04)] public uint       BubbleType;
+        [FieldOffset(0x04)] public uint BubbleType;
         [FieldOffset(0x08)] public Utf8String Word;
         [FieldOffset(0x70)] public Utf8String AlternateWord;
-        [FieldOffset(0xF8)] public float      CastProgress;
+        [FieldOffset(0xF8)] public float CastProgress;
     }
 }
