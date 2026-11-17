@@ -174,6 +174,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
             Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
             Svc.PluginInterface.LanguageChanged -= OnDalamudLanguageChanged;
             Svc.Framework.Update -= RunBot;
+            GoldSaucerGateRunner.Stop();
             PrepareTriadSessionForPluginUnload();
             _triadCollectionHost?.Dispose();
             YesAlready.ResumeIfPausedBySaucy();
@@ -221,6 +222,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
         var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (args.Length >= 1 && args[0].Equals("stop", StringComparison.OrdinalIgnoreCase))
         {
+            GoldSaucerGateRunner.Stop();
             TriadRunSession.StopAllAutomation();
             return;
         }
